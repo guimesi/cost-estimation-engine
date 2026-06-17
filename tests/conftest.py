@@ -19,7 +19,7 @@ def _force_mock_data_source(monkeypatch):
     ``SETTINGS`` is a frozen dataclass, so we patch the module-level instance
     with a mock-forced copy on every module that imported it by reference.
     """
-    mock_settings = dataclasses.replace(SETTINGS, data_source="mock")
+    mock_settings = dataclasses.replace(SETTINGS, data_source="mock", emma_source="mock")
     monkeypatch.setattr("config.settings.SETTINGS", mock_settings)
     monkeypatch.setattr("src.snowflake_client.SETTINGS", mock_settings)
     yield

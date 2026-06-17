@@ -33,5 +33,7 @@ Thumbs.db
 # Data
 *.csv
 *.parquet
-data/
+*.xlsx
+data/*
+!data/README.md
 output/

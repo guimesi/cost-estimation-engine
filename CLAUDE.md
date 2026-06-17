@@ -19,7 +19,24 @@ Two data-source modes via `DATA_SOURCE`:
 - `mock` (default): deterministic synthetic ADR + EMMA from `src/mock_data.py`.
 - `snowflake`: real reads through `src/snowflake_client.py`.
 
-Tests always run against `mock` (autouse fixture in `tests/conftest.py`).
+EMMA has its **own** source knob, `EMMA_SOURCE` (`mock`/`excel`/`snowflake`,
+defaults to `DATA_SOURCE`), so ADR can come from Snowflake while the MFC/LRC
+factors are read from local Excel workbooks - the interim setup until those
+tables land in Snowflake. With `EMMA_SOURCE=excel`, drop the two workbooks in
+`EMMA_DIR` (default `data/`); `src/emma_excel.py` loads them.
+
+> **Heads-up - the EMMA files are named inverted vs. the spec.** The doc calls
+> the per-commodity workbook `MFC.xlsx` (Material) and the multiplier+USD-rate
+> workbook `LRC.xlsx` (Labor), and the engine's canonical names follow the doc
+> (`MFC_*`=material per code, `LRC_*`=labor). But the real exports were observed
+> with their contents crossed (the file named `MFC.xlsx` held the labor columns
+> and vice-versa). So the Excel loader **routes each file by its columns, not
+> its filename**: a workbook with a `code` column -> Material/MFC frame; a
+> workbook with `factorMultiplier`+`totalUSDRate` (no code) -> Labor/LRC frame.
+> Correct under either naming; the engine and schema were NOT renamed.
+
+Tests always run against `mock` (autouse fixture in `tests/conftest.py` pins
+both `data_source` and `emma_source` to `mock`).
 
 ## The workflow (3 steps)
 
@@ -52,6 +69,8 @@ src/
                                #   4 ADR tables, latest snapshot per project)
   emma_reference.py            # load_mfc/load_lrc, available_selections,
                                #   lrc_lookup, mfc_factor_map
+  emma_excel.py                # EMMA_SOURCE=excel loader; routes workbooks to
+                               #   material/labor frames by COLUMNS, not filename
   estimation_engine.py         # estimate_lines (vectorized) + run_estimation
   csv_export.py                # build_lines_csv / build_summary_csv
 ui/

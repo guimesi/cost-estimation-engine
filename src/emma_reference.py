@@ -41,20 +41,28 @@ logger = logging.getLogger(__name__)
 # Loading (mock vs Snowflake)
 # =============================================================================
 def load_mfc() -> pd.DataFrame:
-    """Load the MFC reference frame with canonical columns."""
-    if SETTINGS.is_mock:
+    """Load the MFC (material) reference frame with canonical columns."""
+    if SETTINGS.emma_is_mock:
         from src.mock_data import mock_mfc
 
         return mock_mfc()
+    if SETTINGS.emma_is_excel:
+        from src.emma_excel import load_excel_mfc
+
+        return load_excel_mfc()
     return _load_snowflake_reference("MFC", MFC_RAW_RENAME)
 
 
 def load_lrc() -> pd.DataFrame:
-    """Load the LRC reference frame with canonical columns."""
-    if SETTINGS.is_mock:
+    """Load the LRC (labor) reference frame with canonical columns."""
+    if SETTINGS.emma_is_mock:
         from src.mock_data import mock_lrc
 
         return mock_lrc()
+    if SETTINGS.emma_is_excel:
+        from src.emma_excel import load_excel_lrc
+
+        return load_excel_lrc()
     return _load_snowflake_reference("LRC", LRC_RAW_RENAME)
 
 

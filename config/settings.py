@@ -24,6 +24,14 @@ class Settings:
     # Data source
     data_source: str = os.getenv("DATA_SOURCE", "mock").lower()
 
+    # EMMA reference source (MFC/LRC). Independent of ``data_source`` so ADR can
+    # come from Snowflake while the EMMA factors are read from local Excel files
+    # (the interim setup until MFC/LRC tables land in Snowflake). Defaults to
+    # ``data_source`` when unset. Options: "mock" | "excel" | "snowflake".
+    emma_source: str = os.getenv("EMMA_SOURCE", os.getenv("DATA_SOURCE", "mock")).lower()
+    # Directory holding MFC.xlsx / LRC.xlsx when ``emma_source == "excel"``.
+    emma_dir: str = os.getenv("EMMA_DIR", "data")
+
     # Snowflake. Connection details have NO real defaults - they must be
     # supplied via .env (see .env.example). Empty values mean "not configured";
     # snowflake_client only connects when DATA_SOURCE=snowflake, and it already
@@ -43,6 +51,14 @@ class Settings:
     @property
     def is_mock(self) -> bool:
         return self.data_source == "mock"
+
+    @property
+    def emma_is_mock(self) -> bool:
+        return self.emma_source == "mock"
+
+    @property
+    def emma_is_excel(self) -> bool:
+        return self.emma_source == "excel"
 
 
 SETTINGS = Settings()

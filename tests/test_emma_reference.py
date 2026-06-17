@@ -48,7 +48,9 @@ def test_snowflake_load_path(monkeypatch):
 
     import src.snowflake_client as sc
 
-    sf_settings = dataclasses.replace(emma.SETTINGS, data_source="snowflake")
+    sf_settings = dataclasses.replace(
+        emma.SETTINGS, data_source="snowflake", emma_source="snowflake"
+    )
     monkeypatch.setattr("src.emma_reference.SETTINGS", sf_settings)
 
     raw = pd.DataFrame({"MFC_CODE": ["C1"], "MFC_LOCATIONCODE": ["X"],
