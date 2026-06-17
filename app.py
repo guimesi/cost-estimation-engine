@@ -3,20 +3,22 @@ Streamlit entry point for the Cost Estimation Engine.
 
 Run with:  streamlit run app.py
 
-Router foundation copied from the Data Quality app: a ``current_step ->
-renderer`` dispatch, one sidebar build, and one global stylesheet injected per
-render. The step inventory is a placeholder single ``home`` step until the CEE
-workflow is specified.
+Router foundation from the data-quality-app: a ``current_step -> renderer``
+dispatch, one sidebar build, and one global stylesheet per render. The flow is
+three steps: pick a project -> choose Location + Period -> view the comparison
+and download the CSV.
 """
 from __future__ import annotations
 
 import streamlit as st
 
-from ui import step_home
+from ui import step_parameters, step_project_selection, step_results
 from ui._theme import inject_global_css
 from utils.session_state import (
+    consume_scroll_to_top,
     init_state,
     inject_sidebar_css,
+    render_progress_sidebar,
     render_sample_mode_toggle,
     render_sidebar_brand,
     render_sidebar_footer,
@@ -29,17 +31,20 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
 STEP_RENDERERS = {
-    "home": step_home.render,
+    "project_selection": step_project_selection.render,
+    "parameters": step_parameters.render,
+    "results": step_results.render,
 }
 
 
 def main() -> None:
     init_state()
+    consume_scroll_to_top()
 
     inject_sidebar_css()
     render_sidebar_brand()
+    render_progress_sidebar()
     render_sample_mode_toggle()
     render_sidebar_footer()
 

@@ -1,53 +1,224 @@
 """Deterministic synthetic data for the ``mock`` data source.
 
-Placeholder until the Cost Estimation Engine domain spec lands. The one piece
-of foundation worth carrying over verbatim is the determinism contract from
-the Data Quality app:
+Builds a small but realistic ADR estimate dataset (the 4 source tables) plus
+the EMMA reference data (MFC material factors and LRC labor factors), so the
+whole app runs end-to-end with no Snowflake connection.
 
-    The module uses one shared, stateful RNG. Because every ``RNG.choice(...)``
-    advances it, a builder is only pure if the generator starts from the same
-    place each call - so ``_reseed_rng_for(name)`` reseeds from a STABLE hash
-    of the name (``zlib.crc32``, NOT the salted built-in ``hash``, so it's
-    stable across processes). Call it at the start of every builder that draws
-    from ``RNG``, and anchor any "recent" dates to ``_MOCK_NOW`` (captured once
-    at import) rather than inline ``datetime.now()``.
+Determinism contract (carried over from the sibling data-quality-app): every
+frame is built ONCE at import with a dedicated, fixed-seed RNG and fixed
+iteration order, so the byte content is identical on every call regardless of
+order - scores never drift run-to-run. ``fetch_mock_table`` and the EMMA
+builders just return slices/copies of these import-time frames.
 
-This keeps mock output byte-identical across calls regardless of call order,
-so scores never drift run-to-run.
+These are MODELING CHOICES, not the real schema: the doc names the 4 ADR
+tables but not their exact columns, so the split below (item record / design
+details / cost results / qty results) is a reasonable reconstruction. The
+real column names are reconciled in :mod:`src.adr_repository` /
+:mod:`src.emma_reference` without touching the engine.
 """
 from __future__ import annotations
 
 import zlib
-from datetime import datetime
+from typing import Dict, List
 
 import numpy as np
+import pandas as pd
 
-# Captured once at import so "recent"-relative date columns are stable within
-# a process (inline datetime.now() differs by microseconds per build).
-_MOCK_NOW = datetime.now()
+from config.schema import (
+    COL_BASE_MATERIAL_MFC,
+    COL_DB_BM_C,
+    COL_DB_FIELD_LABOR_C,
+    COL_DB_FIELD_LABOR_H,
+    COL_DB_FSF_C,
+    COL_DB_FSF_H,
+    COL_DB_SPEC_C,
+    COL_DB_SPEC_H,
+    COL_DB_VSF_C,
+    COL_DESCRIPTION,
+    COL_ITEM_ID,
+    COL_PROJECT_ID,
+    COL_PROJECT_NAME,
+    COL_QUANTITY,
+    COL_SNAPSHOT_ID,
+    COL_VENDOR_SHOP_FAB_MFC,
+    COL_WBS,
+    LRC_FACTOR_MULTIPLIER,
+    LRC_LOCATION,
+    LRC_LOCATION_CODE,
+    LRC_PERIOD,
+    LRC_TOTAL_USD_RATE,
+    MFC_CODE,
+    MFC_DESCRIPTION,
+    MFC_FACTOR_VALUE,
+    MFC_LOCATION,
+    MFC_LOCATION_CODE,
+    MFC_PERIOD,
+    TBL_COST_RESULTS,
+    TBL_DESIGN_DETAILS,
+    TBL_ITEM_RECORD,
+    TBL_QTY_RESULTS,
+)
 
-# One shared, stateful module RNG. Reseed per builder via _reseed_rng_for.
-RNG = np.random.default_rng(0)
+# =============================================================================
+# Reference dimensions (shared keys between ADR lines and EMMA factors)
+# =============================================================================
+# (location_code, location_name)
+LOCATIONS: List[tuple] = [
+    ("USTX", "Houston, TX, USA"),
+    ("SGP", "Singapore"),
+    ("NLD", "Rotterdam, NL"),
+]
+PERIODS: List[str] = ["2024-H1", "2024-H2", "2025-H1"]
+
+# Material Factor Codes referenced by ADR lines (base material + vendor shop fab).
+MFC_CODES: Dict[str, str] = {
+    "STEEL-CS": "Carbon steel structural",
+    "STEEL-SS": "Stainless steel structural",
+    "PIPE-CS": "Carbon steel piping",
+    "VALVE-GATE": "Gate valves",
+    "INSTR-XMTR": "Instrumentation transmitters",
+    "ELEC-CABLE": "Electrical cable",
+}
+
+# Per-location base USD labor rate; period applies a small escalation.
+_LOCATION_BASE_RATE = {"USTX": 65.0, "SGP": 48.0, "NLD": 72.0}
+_PERIOD_ESCALATION = {"2024-H1": 1.00, "2024-H2": 1.03, "2025-H1": 1.07}
+
+# Projects with ADR estimations loaded. Each gets an older snapshot (1) and a
+# latest snapshot (2); the repository selects the latest per project.
+_PROJECTS: List[tuple] = [
+    ("PRJ-1001", "Coker Unit Revamp"),
+    ("PRJ-1002", "LNG Train 4 Expansion"),
+    ("PRJ-1003", "Offshore Platform Topsides"),
+    ("PRJ-1004", "Refinery Tank Farm"),
+]
+_SNAPSHOTS = [1, 2]
+_WBS_POOL = ["WBS-100", "WBS-200", "WBS-300", "WBS-400", "WBS-500"]
 
 
-def _reseed_rng_for(name: str) -> None:
-    """Reseed the shared module ``RNG`` from a stable hash of ``name``.
+def _seed(name: str) -> np.random.Generator:
+    """Fixed, process-stable RNG seeded from ``name`` (``zlib.crc32``)."""
+    return np.random.default_rng(zlib.crc32(name.encode("utf-8")))
 
-    ``zlib.crc32`` is stable across processes (unlike the salted built-in
-    ``hash``), so a given builder name always yields the same byte stream.
+
+# =============================================================================
+# EMMA reference frames (built once at import)
+# =============================================================================
+def _build_mfc() -> pd.DataFrame:
+    rng = _seed("emma_mfc")
+    rows = []
+    for code, desc in MFC_CODES.items():
+        for loc_code, loc_name in LOCATIONS:
+            for period in PERIODS:
+                rows.append(
+                    {
+                        MFC_CODE: code,
+                        MFC_DESCRIPTION: desc,
+                        MFC_LOCATION: loc_name,
+                        MFC_LOCATION_CODE: loc_code,
+                        MFC_PERIOD: period,
+                        MFC_FACTOR_VALUE: round(float(rng.uniform(0.85, 1.35)), 3),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def _build_lrc() -> pd.DataFrame:
+    rng = _seed("emma_lrc")
+    rows = []
+    for loc_code, loc_name in LOCATIONS:
+        for period in PERIODS:
+            base = _LOCATION_BASE_RATE[loc_code] * _PERIOD_ESCALATION[period]
+            rows.append(
+                {
+                    LRC_LOCATION: loc_name,
+                    LRC_LOCATION_CODE: loc_code,
+                    LRC_PERIOD: period,
+                    LRC_FACTOR_MULTIPLIER: round(float(rng.uniform(0.90, 1.25)), 3),
+                    LRC_TOTAL_USD_RATE: round(base, 2),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+# =============================================================================
+# ADR master (built once, then split into the 4 source tables)
+# =============================================================================
+def _build_adr_master() -> pd.DataFrame:
+    """One row per (project, snapshot, item) with all canonical fields.
+
+    The 4 ADR tables are projections of this master onto shared keys, which
+    guarantees the join in the repository reconstructs exactly these rows.
     """
-    RNG.bit_generator.state = np.random.default_rng(
-        zlib.crc32(name.encode("utf-8"))
-    ).bit_generator.state
+    rng = _seed("adr_master")
+    codes = list(MFC_CODES.keys())
+    rows = []
+    for project_id, project_name in _PROJECTS:
+        for snap in _SNAPSHOTS:
+            # Older snapshot has fewer items; latest snapshot is the full estimate.
+            n_items = int(rng.integers(8, 14)) if snap == 1 else int(rng.integers(16, 29))
+            for i in range(n_items):
+                item_id = f"{project_id}-S{snap}-{i:03d}"
+                spec_h = round(float(rng.uniform(0, 120)), 1)
+                fsf_h = round(float(rng.uniform(0, 200)), 1)
+                fl_h = round(float(rng.uniform(10, 260)), 1)
+                rows.append(
+                    {
+                        COL_PROJECT_ID: project_id,
+                        COL_PROJECT_NAME: project_name,
+                        COL_SNAPSHOT_ID: snap,
+                        COL_ITEM_ID: item_id,
+                        COL_WBS: _WBS_POOL[int(rng.integers(0, len(_WBS_POOL)))],
+                        COL_DESCRIPTION: f"Item {i:03d} - {project_name}",
+                        COL_QUANTITY: round(float(rng.uniform(1, 500)), 2),
+                        COL_BASE_MATERIAL_MFC: codes[int(rng.integers(0, len(codes)))],
+                        COL_VENDOR_SHOP_FAB_MFC: codes[int(rng.integers(0, len(codes)))],
+                        # Databook hours
+                        COL_DB_SPEC_H: spec_h,
+                        COL_DB_FSF_H: fsf_h,
+                        COL_DB_FIELD_LABOR_H: fl_h,
+                        # Databook costs
+                        COL_DB_SPEC_C: round(spec_h * float(rng.uniform(40, 90)), 2),
+                        COL_DB_FSF_C: round(fsf_h * float(rng.uniform(40, 90)), 2),
+                        COL_DB_FIELD_LABOR_C: round(fl_h * float(rng.uniform(40, 90)), 2),
+                        COL_DB_BM_C: round(float(rng.uniform(500, 80000)), 2),
+                        COL_DB_VSF_C: round(float(rng.uniform(0, 60000)), 2),
+                    }
+                )
+    return pd.DataFrame(rows)
 
 
-def fetch_mock_table(table_name: str):  # pragma: no cover - placeholder
-    """Return a deterministic mock DataFrame for ``table_name``.
+_MFC = _build_mfc()
+_LRC = _build_lrc()
+_ADR_MASTER = _build_adr_master()
 
-    Stub: fill in once the CEE table/domain spec is available. Real builders
-    must call ``_reseed_rng_for(table_name)`` first.
-    """
-    raise NotImplementedError(
-        "Mock tables are not defined yet - awaiting the Cost Estimation "
-        "Engine domain specification."
-    )
+# The 4 ADR source tables as projections of the master (shared keys).
+_KEYS = [COL_PROJECT_ID, COL_SNAPSHOT_ID, COL_ITEM_ID]
+_ADR_TABLE_COLUMNS = {
+    TBL_ITEM_RECORD: _KEYS + [COL_PROJECT_NAME, COL_WBS],
+    TBL_DESIGN_DETAILS: [COL_ITEM_ID, COL_SNAPSHOT_ID, COL_DESCRIPTION,
+                         COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC],
+    TBL_COST_RESULTS: [COL_ITEM_ID, COL_SNAPSHOT_ID,
+                       COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
+                       COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C,
+                       COL_DB_BM_C, COL_DB_VSF_C],
+    TBL_QTY_RESULTS: [COL_ITEM_ID, COL_SNAPSHOT_ID, COL_QUANTITY],
+}
+
+
+def fetch_mock_table(table_name: str) -> pd.DataFrame:
+    """Return a deterministic mock ADR source table as a fresh copy."""
+    if table_name not in _ADR_TABLE_COLUMNS:
+        raise KeyError(f"Unknown mock ADR table: {table_name}")
+    cols = _ADR_TABLE_COLUMNS[table_name]
+    return _ADR_MASTER[cols].copy()
+
+
+def mock_mfc() -> pd.DataFrame:
+    """Return the deterministic mock MFC reference frame (fresh copy)."""
+    return _MFC.copy()
+
+
+def mock_lrc() -> pd.DataFrame:
+    """Return the deterministic mock LRC reference frame (fresh copy)."""
+    return _LRC.copy()

@@ -1,11 +1,9 @@
 """One consolidated main-area stylesheet, injected once in ``app.main()``.
 
-Mirrors the Data Quality app's H5 pattern: main-area CSS is NOT per-step. The
-three status hexes live ONLY in :mod:`utils.colors`; they're embedded here via
-``__GREEN__`` / ``__YELLOW__`` / ``__RED__`` sentinels swapped at inject time
-(brace-safe - no f-string escaping of the whole sheet). A re-brand is one edit.
-
-Don't reintroduce a per-step ``<style>`` block or a hardcoded status hex.
+The three status hexes live ONLY in :mod:`utils.colors` and are embedded here
+via ``__GREEN__`` / ``__YELLOW__`` / ``__RED__`` sentinels swapped at inject
+time (brace-safe). Don't reintroduce a per-step ``<style>`` block or a
+hardcoded status hex.
 """
 from __future__ import annotations
 
@@ -19,25 +17,33 @@ _GLOBAL_CSS = """
 .cee-card {
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    padding: 1.25rem 1.5rem;
+    padding: 1.1rem 1.35rem;
     background: #ffffff;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    margin-bottom: 1rem;
+    margin-bottom: 0.9rem;
 }
-.cee-card h3 { margin-top: 0; }
+.cee-card h3, .cee-card h4 { margin-top: 0; }
+.cee-card.selected { border-color: #f59e0b; box-shadow: 0 0 0 2px #fde68a; }
+
+/* Selected badge */
+.cee-badge {
+    display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 700; background: #f59e0b; color: #1f2937;
+}
 
 /* Status pills */
 .cee-pill {
-    display: inline-block;
-    padding: 0.15rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #fff;
+    display: inline-block; padding: 0.12rem 0.55rem; border-radius: 999px;
+    font-size: 0.78rem; font-weight: 600; color: #fff;
 }
 .cee-pill.green  { background: __GREEN__; }
 .cee-pill.yellow { background: __YELLOW__; color: #1f2937; }
 .cee-pill.red    { background: __RED__; }
+
+/* Delta text colour */
+.cee-up   { color: __RED__;   font-weight: 600; }
+.cee-down { color: __GREEN__; font-weight: 600; }
+.cee-flat { color: __YELLOW__; font-weight: 600; }
 </style>
 """
 
