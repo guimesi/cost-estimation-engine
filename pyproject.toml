@@ -1,0 +1,38 @@
+# Project configuration for tooling that reads pyproject.toml.
+# Build metadata is intentionally absent - this project ships as a
+# Streamlit app, not a PyPI package; dependencies live in
+# ``requirements.txt``.
+
+# Pyright / IDE: the import root is the project root (so ``from
+# config.settings import ...`` resolves), NOT ``src/``. ``src/`` is just one
+# of several top-level packages alongside ``config/``, ``ui/``, ``utils/``.
+[tool.pyright]
+include = ["app.py", "config", "src", "ui", "utils", "tests"]
+extraPaths = ["."]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+src = ["."]
+extend-exclude = [
+    ".venv",
+    "documents",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes: undefined names, unused imports/variables, etc.
+    "I",     # isort: import ordering (auto-fixable)
+    "W291",  # trailing whitespace
+    "W292",  # no newline at end of file
+    "W293",  # whitespace on blank line
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:streamlit.*",
+    "ignore:.*ScriptRunContext.*:UserWarning",
+]
