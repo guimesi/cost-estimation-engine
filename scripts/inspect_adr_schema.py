@@ -9,8 +9,15 @@ output back so the raw->canonical ADR rename maps can be filled in
 """
 from __future__ import annotations
 
-from config.schema import ADR_TABLES
-from src.snowflake_client import get_shared_client
+import sys
+from pathlib import Path
+
+# Allow running as `python scripts/inspect_adr_schema.py` from anywhere:
+# put the project root (this file's parent's parent) on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from config.schema import ADR_TABLES  # noqa: E402
+from src.snowflake_client import get_shared_client  # noqa: E402
 
 
 def main() -> None:
