@@ -32,6 +32,10 @@ select = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Put the project root on sys.path so `from config.settings import ...` resolves
+# when pytest is invoked directly (e.g. `pytest -q` in CI), not just via
+# `python -m pytest` (which adds the cwd automatically).
+pythonpath = ["."]
 filterwarnings = [
     "ignore::DeprecationWarning:streamlit.*",
     "ignore:.*ScriptRunContext.*:UserWarning",
