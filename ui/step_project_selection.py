@@ -50,7 +50,7 @@ def _filter(projects: list[ProjectRef], query: str) -> list[ProjectRef]:
 
 def _render_dropdown(projects: list[ProjectRef]) -> None:
     ids = [p.project_id for p in projects]
-    labels = {p.project_id: f"{p.project_id} — {p.project_name}" for p in projects}
+    labels = {p.project_id: f"{p.project_id} - {p.project_name}" for p in projects}
     current = st.session_state.get("selected_project_id")
     index = ids.index(current) if current in ids else 0
 

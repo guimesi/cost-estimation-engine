@@ -23,11 +23,11 @@ the full 3-step flow works with no Snowflake connection.
 
 ## The flow
 
-1. **Project** — pick a project that has ADR estimations loaded (latest
+1. **Project** - pick a project that has ADR estimations loaded (latest
    snapshot is used).
-2. **Location & Period** — choose from the (Location, Period) pairs present in
+2. **Location & Period** - choose from the (Location, Period) pairs present in
    both the MFC and LRC reference data.
-3. **Estimation** — see total cost & hours (original vs updated, absolute + %),
+3. **Estimation** - see total cost & hours (original vs updated, absolute + %),
    a per-category breakdown (Specialty Subcontractor, Vendor Shop, Base
    Material, Field Shop Fabrication, Field Labor), grouped bar charts, and two
    CSV downloads (line-level + category summary).
@@ -93,7 +93,7 @@ tests/                       # engine, emma, adr, csv, mock, helpers, snowflake,
 
 `adr_repository` and `emma_reference` branch on `SETTINGS.is_mock`. The
 Snowflake path is wired (it reads the 4 ADR tables and the MFC/LRC references
-through the shared client) but the exact source column names are placeholders —
+through the shared client) but the exact source column names are placeholders -
 reconcile the raw→canonical maps in [config/schema.py](config/schema.py)
 (`MFC_RAW_RENAME` / `LRC_RAW_RENAME`) and the ADR table projections against the
 real schema. The calculation engine never changes.
