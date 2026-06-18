@@ -90,14 +90,48 @@ def _raw_qty_results() -> pd.DataFrame:
 
 
 class _FakeClient:
+    """Emulates the slice of Snowflake the repository now relies on.
+
+    The new path pushes work to SQL: an aggregation to list projects, a distinct
+    query for a project's snapshots, and projected + filtered table reads. The
+    fake interprets those queries against the raw frames so the tests exercise
+    the same server-side semantics (filtering, latest-snapshot pick) the real
+    client would apply.
+    """
+
     _BY_TABLE = {
         TBL_ITEM_RECORD: _raw_item_record,
         TBL_COST_RESULTS: _raw_cost_results,
         TBL_QTY_RESULTS: _raw_qty_results,
     }
 
-    def fetch_table(self, table_name, *args, **kwargs):
-        return self._BY_TABLE[table_name]()
+    def qualified(self, table_name):
+        return table_name
+
+    def fetch_query(self, sql, params=None):
+        item = self._BY_TABLE[TBL_ITEM_RECORD]()
+        if "GROUP BY" in sql:  # _sf_list_projects aggregation
+            return (
+                item.groupby(["PLANVIEW_ID", "SNAPSHOT"], as_index=False)
+                .agg(FILE_NAME=("FILE_NAME", "max"), N_ITEMS=("ROW_ID", "size"))
+                [["PLANVIEW_ID", "FILE_NAME", "SNAPSHOT", "N_ITEMS"]]
+            )
+        if "DISTINCT SNAPSHOT" in sql:  # latest-snapshot lookup for one project
+            sub = item[item["PLANVIEW_ID"] == params[0]]
+            return pd.DataFrame({"SNAPSHOT": sub["SNAPSHOT"].unique()})
+        raise AssertionError(f"unexpected query: {sql}")
+
+    def fetch_table(self, table_name, columns=None, where=None, params=None, limit=None):
+        df = self._BY_TABLE[table_name]()
+        if where and where.startswith("PLANVIEW_ID"):
+            pid, snap = params
+            df = df[(df["PLANVIEW_ID"] == pid) & (df["SNAPSHOT"] == snap)]
+        elif where and where.startswith("ROW_ID IN"):
+            pid, snap = params
+            item = self._BY_TABLE[TBL_ITEM_RECORD]()
+            ids = item[(item["PLANVIEW_ID"] == pid) & (item["SNAPSHOT"] == snap)]["ROW_ID"]
+            df = df[df["ROW_ID"].isin(ids)]
+        return df.reset_index(drop=True)
 
 
 @pytest.fixture
@@ -110,7 +144,8 @@ def _snowflake(monkeypatch):
 
 
 def test_snowflake_reconciles_canonical_columns(_snowflake):
-    lines = repo._canonical_lines()
+    # Loading one project projects + reconciles the raw ITPlus columns.
+    lines = repo.load_project_lines("PV1")
     for col in (*ADR_LINE_NUMERIC_COLUMNS, COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC):
         assert col in lines.columns
     # String databook hours were coerced to numeric.
@@ -122,6 +157,7 @@ def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):
     # PV1 had SCREEN + GATE3 -> GATE3 wins; PV2 only GATE2.
     assert projects["PV1"].snapshot_id == "GATE3"
     assert projects["PV2"].snapshot_id == "GATE2"
+    assert projects["PV1"].n_items == 1  # count at the winning (GATE3) snapshot
 
     pv1 = repo.load_project_lines("PV1")
     assert (pv1[COL_SNAPSHOT_ID] == "GATE3").all()

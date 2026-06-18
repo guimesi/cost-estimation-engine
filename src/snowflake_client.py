@@ -81,19 +81,31 @@ class SnowflakeClient:
             finally:
                 self._conn = None
 
+    def qualified(self, table_name: str) -> str:
+        """Return ``database.schema.table`` for the resolved location.
+
+        Exposed so call sites that compose their own SQL (projected reads,
+        aggregations, subquery filters) qualify tables the same way
+        :meth:`fetch_table` does, without duplicating the location logic.
+        """
+        database, schema = _resolve_location()
+        return f"{database}.{schema}.{table_name}"
+
     def fetch_table(
         self,
         table_name: str,
         limit: Optional[int] = None,
         where: Optional[str] = None,
         params: Optional[Sequence[object]] = None,
+        columns: Optional[Sequence[str]] = None,
     ) -> pd.DataFrame:
         """Fetch a table as DataFrame, qualified with the resolved
         ``database.schema``.
 
         Uses the Arrow path (``fetch_pandas_all``) - fastest for wide result
         sets. If you hit an ``ArrowInvalid: Schema at index N was different``
-        error, project the columns you need via :meth:`fetch_query` instead.
+        error, project the columns you need (``columns=...``) or fall back to
+        :meth:`fetch_query`.
 
         Args:
             table_name: bare table name (qualified internally).
@@ -104,11 +116,14 @@ class SnowflakeClient:
                 so this module performs no quoting / escaping (injection-safe).
             params: positional parameter values matching ``%s`` slots in
                 ``where``. Ignored when ``where`` is falsy.
+            columns: optional projection - the exact columns to SELECT
+                (``None`` = ``SELECT *``). Pushing the projection to Snowflake
+                avoids transferring unused columns on wide tables.
         """
         conn = self.connect()
-        database, schema = _resolve_location()
-        qualified = f"{database}.{schema}.{table_name}"
-        query = f"SELECT * FROM {qualified}"
+        qualified = self.qualified(table_name)
+        select_list = ", ".join(columns) if columns else "*"
+        query = f"SELECT {select_list} FROM {qualified}"
         if where:
             query += f" WHERE {where}"
         if limit is not None:
@@ -126,18 +141,26 @@ class SnowflakeClient:
         df.columns = [c.upper() for c in df.columns]
         return df
 
-    def fetch_query(self, sql: str) -> pd.DataFrame:
+    def fetch_query(
+        self, sql: str, params: Optional[Sequence[object]] = None
+    ) -> pd.DataFrame:
         """Run an arbitrary SELECT and return the result as a DataFrame.
 
         Uses ``cur.fetchall()`` (Python rows → pandas) instead of the Arrow
         path, so callers are immune to Snowflake's Arrow chunk-schema
-        mismatch. Use this for small reference datasets; use
+        mismatch. Use this for small reference / aggregate datasets; use
         :meth:`fetch_table` for wide system-table reads.
+
+        ``params`` binds ``%s`` placeholders server-side (injection-safe),
+        same as :meth:`fetch_table`.
         """
         conn = self.connect()
         cur = conn.cursor()
         try:
-            cur.execute(sql)
+            if params:
+                cur.execute(sql, list(params))
+            else:
+                cur.execute(sql)
             rows = cur.fetchall()
             cols = [d[0].upper() for d in cur.description]
         finally:

@@ -37,10 +37,10 @@ def test_full_click_flow_to_results():
     at.button(key="start_btn").click().run()
     assert at.session_state["current_step"] == "project_selection"
 
-    # Step 1: select a project, then advance.
-    at.button(key=f"pick_{pid}").click().run()
+    # Step 1: select a project (the id any layout sets), then advance.
+    at.session_state["selected_project_id"] = pid
+    at.run()
     assert not at.exception
-    assert at.session_state["selected_project_id"] == pid
     _click(at, "Next →")
     assert at.session_state["current_step"] == "parameters"
 

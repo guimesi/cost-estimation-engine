@@ -73,8 +73,9 @@ src/
                                #   EstimationResult
   snowflake_client.py          # connector wrapper (fetch_table / fetch_query)
   mock_data.py                 # deterministic ADR master -> 4 tables + EMMA
-  adr_repository.py            # list_projects + load_project_lines (joins the
-                               #   4 ADR tables, latest snapshot per project)
+  adr_repository.py            # list_projects + load_project_lines; mock joins
+                               #   in memory, Snowflake aggregates + reads one
+                               #   project's lines projected/filtered server-side
   emma_reference.py            # load_mfc/load_lrc, available_selections,
                                #   lrc_lookup, mfc_factor_map
   emma_excel.py                # EMMA_SOURCE=excel loader; routes workbooks to
@@ -124,10 +125,11 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
 3. **Mock ADR table split is a modeling choice; the REAL ADR schema diverges.**
    `src/mock_data.py` builds ONE master row per item and projects it onto the 4
    tables on shared keys (`ITEM_ID`, `SNAPSHOT_ID`, `PROJECT_ID`);
-   `adr_repository._join_tables` reconstructs the canonical frame (mock path).
-   The live Snowflake schema (reconciled in `adr_repository._snowflake_lines`,
-   maps in `config/schema.py`, verified via `scripts/inspect_adr_schema.py`) is
-   different and handled separately:
+   `adr_repository._join_tables` reconstructs the canonical frame (mock path,
+   which loads the whole small universe in memory).
+   The live Snowflake schema (reconciled in `adr_repository._sf_load_project_lines`
+   / `_sf_list_projects`, maps in `config/schema.py`, verified via
+   `scripts/inspect_adr_schema.py`) is different and handled separately:
    - **Item join key is `ROW_ID`** (-> canonical `ITEM_ID`), not a composite.
    - **`ADR_DIM_ESTIMATEDESIGNDETAILS` is an EAV table** (one row per design
      parameter) carrying nothing the engine needs, so it is NOT joined - only
@@ -138,6 +140,15 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
      highest-ranked gate per project. `ProjectRef.snapshot_id` is therefore
      `int | str` (gate label in Snowflake, int in mock).
    - Some databook values arrive as **strings** ("0", "9.47") and are coerced.
+   - **Reads are pushed to Snowflake, not pulled whole** (the real base is ~800k
+     rows × dozens of columns): `list_projects` runs a `GROUP BY PLANVIEW_ID,
+     SNAPSHOT` aggregation (one row per project×snapshot, no line items);
+     `load_project_lines` reads only the chosen project's latest-snapshot rows,
+     **projected to the needed columns** (`SnowflakeClient.fetch_table(columns=)`
+     = the rename-map keys) and filtered server-side (`WHERE PLANVIEW_ID=%s`;
+     cost/qty have no project key so they're filtered by a `ROW_ID IN (subquery)`
+     on the item table). The `ui/_data.py` `st.cache_data` layer then makes
+     re-opening a project instant.
    The engine and UI never change - all of this lives in the repo + schema.
 4. **Missing MFC factor for a line's code** -> factor `1.0` (cost unchanged)
    plus a recorded warning, never a dropped line. **Missing LRC** for the
