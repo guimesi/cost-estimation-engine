@@ -122,6 +122,62 @@ LRC_RAW_RENAME = {
 }
 
 # =============================================================================
+# ADR raw -> canonical column maps (real Snowflake / ITPlus headers)
+# =============================================================================
+# The 4 ADR tables ship the real ITPlus column names (uppercased by the
+# client). These maps reconcile them onto the canonical names above; applied
+# per table in :func:`src.adr_repository._snowflake_lines`. Reconciled against
+# the live schema (see scripts/inspect_adr_schema.py).
+#
+# Notes:
+# - The item-level join key is ``ROW_ID`` (canonical ``ITEM_ID``); the same
+#   value appears on every fact table. ``ADR_ID`` is the estimate-level id
+#   (planview + gate + split + ADR number) - too coarse for an item join.
+# - ``ADR_DIM_ESTIMATEDESIGNDETAILS`` is an EAV table (one row per design
+#   parameter) and contributes no column the engine needs, so it is NOT joined.
+# - Several DB_* values arrive as strings ("0", "9.47"); the repository coerces
+#   ADR_LINE_NUMERIC_COLUMNS to numeric after the rename.
+ADR_ITEM_RECORD_RENAME = {
+    "ROW_ID": COL_ITEM_ID,
+    "PLANVIEW_ID": COL_PROJECT_ID,
+    "FILE_NAME": COL_PROJECT_NAME,
+    "SNAPSHOT": COL_SNAPSHOT_ID,
+    "COMPLETE_WBC": COL_WBS,
+    "ITEM_DESCRIPTION": COL_DESCRIPTION,
+}
+ADR_COST_RESULTS_RENAME = {
+    "ROW_ID": COL_ITEM_ID,
+    "DB_SPEC_S_C": COL_DB_SPEC_H,            # databook specialty subcontractor HOURS
+    "DB_SPEC_S_C_COST": COL_DB_SPEC_C,       # databook specialty subcontractor cost
+    "DB_FIELD_SHOP_FAB": COL_DB_FSF_H,       # databook field shop fab HOURS
+    "DB_FIELD_SHOP_FAB_COST": COL_DB_FSF_C,  # databook field shop fab cost
+    "DB_FIELD_LABOR": COL_DB_FIELD_LABOR_H,  # databook field labor HOURS
+    "DB_FIELD_LABOR_COST": COL_DB_FIELD_LABOR_C,
+    "DB_BASE_MATERIAL_COST": COL_DB_BM_C,
+    "DB_VENDOR_SHOP_FAB_COST": COL_DB_VSF_C,
+    "BASE_MATERIAL_MFC": COL_BASE_MATERIAL_MFC,
+    "VENDOR_SHOP_FAB_MFC": COL_VENDOR_SHOP_FAB_MFC,
+}
+ADR_QTY_RESULTS_RENAME = {
+    "ROW_ID": COL_ITEM_ID,
+    "QUANTITY": COL_QUANTITY,
+}
+
+# "Latest snapshot per project" ordering. SNAPSHOT is a stage-gate label, not a
+# number, with the business priority SCREEN < GATE1 < ... < GATE3 (later gate =
+# more recent estimate). Higher rank wins. Values absent here fall back to a
+# numeric reading (so the mock's integer snapshots still order correctly), then
+# to "lowest" for anything unrecognized.
+SNAPSHOT_PRIORITY = {
+    "SCREEN": 0,
+    "GATE1": 1,
+    "GATE2": 2,
+    "GATE3": 3,
+    "GATE4": 4,
+    "GATE5": 5,
+}
+
+# =============================================================================
 # Category definitions (drive the engine, the comparison, and the CSV)
 # =============================================================================
 # A cost category pairs the databook (original) column with the engine's

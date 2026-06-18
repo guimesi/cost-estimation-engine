@@ -110,12 +110,24 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
 2. **One LRC factor + USD rate per (location, period) applies to BOTH labor
    categories** (Specialty Subcontractor and Field Shop Fabrication). LRC has
    no labor-type code.
-3. **Mock ADR table split is a modeling choice.** The doc names the 4 ADR
-   tables but not their exact columns. `src/mock_data.py` builds ONE master
-   row per item and projects it onto the 4 tables on shared keys
-   (`ITEM_ID`, `SNAPSHOT_ID`, `PROJECT_ID`); `adr_repository._join_tables`
-   reconstructs the canonical line frame. Real column names get reconciled
-   there + in `config/schema.py` without touching the engine.
+3. **Mock ADR table split is a modeling choice; the REAL ADR schema diverges.**
+   `src/mock_data.py` builds ONE master row per item and projects it onto the 4
+   tables on shared keys (`ITEM_ID`, `SNAPSHOT_ID`, `PROJECT_ID`);
+   `adr_repository._join_tables` reconstructs the canonical frame (mock path).
+   The live Snowflake schema (reconciled in `adr_repository._snowflake_lines`,
+   maps in `config/schema.py`, verified via `scripts/inspect_adr_schema.py`) is
+   different and handled separately:
+   - **Item join key is `ROW_ID`** (-> canonical `ITEM_ID`), not a composite.
+   - **`ADR_DIM_ESTIMATEDESIGNDETAILS` is an EAV table** (one row per design
+     parameter) carrying nothing the engine needs, so it is NOT joined - only
+     item record + cost results + qty are.
+   - **Project = `PLANVIEW_ID`**; display name = `FILE_NAME`.
+   - **Snapshot = `SNAPSHOT`** (stage-gate label, e.g. `GATE3`), ranked by
+     `SNAPSHOT_PRIORITY` (SCREEN < GATE1 < ... < GATE3); "latest snapshot" =
+     highest-ranked gate per project. `ProjectRef.snapshot_id` is therefore
+     `int | str` (gate label in Snowflake, int in mock).
+   - Some databook values arrive as **strings** ("0", "9.47") and are coerced.
+   The engine and UI never change - all of this lives in the repo + schema.
 4. **Missing MFC factor for a line's code** -> factor `1.0` (cost unchanged)
    plus a recorded warning, never a dropped line. **Missing LRC** for the
    selection raises `LookupError` (a guard - the UI only offers selections

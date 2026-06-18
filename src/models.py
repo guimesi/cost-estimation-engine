@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 
@@ -19,7 +19,8 @@ class ProjectRef:
 
     project_id: str
     project_name: str
-    snapshot_id: int
+    # Stage-gate label from Snowflake (e.g. "GATE3") or an integer in mock mode.
+    snapshot_id: Union[int, str]
     n_items: int
 
     @property

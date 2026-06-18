@@ -26,7 +26,7 @@ def render() -> None:
         st.markdown(
             f'<div class="{cls}"><h4>{proj.project_name}{badge}</h4>'
             f"<p><code>{proj.project_id}</code> &nbsp;·&nbsp; "
-            f"{proj.n_items} items &nbsp;·&nbsp; latest snapshot #{proj.snapshot_id}</p>"
+            f"{proj.n_items} items &nbsp;·&nbsp; latest snapshot {proj.snapshot_id}</p>"
             "</div>",
             unsafe_allow_html=True,
         )
