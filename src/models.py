@@ -63,6 +63,45 @@ class Comparison:
 
 
 @dataclass(frozen=True)
+class MfcCoverage:
+    """How well the MFC reference covers a project's material codes for a selection.
+
+    A pre-flight diagnostic computed before running the engine: it quantifies the
+    gap the engine would otherwise only report as a warning - how many distinct
+    material codes lack an MFC factor for the chosen (Location, Period), and how
+    much databook material cost that leaves unchanged (factor 1.0).
+    """
+
+    total_codes: int
+    matched_codes: int
+    missing_codes: List[str]
+    total_material_cost: float
+    unmatched_material_cost: float
+
+    @property
+    def missing_count(self) -> int:
+        return len(self.missing_codes)
+
+    @property
+    def is_fully_covered(self) -> bool:
+        return not self.missing_codes
+
+    @property
+    def matched_pct(self) -> float:
+        """Share of distinct codes with a factor (100% when there are none)."""
+        if self.total_codes == 0:
+            return 100.0
+        return self.matched_codes / self.total_codes * 100.0
+
+    @property
+    def unmatched_cost_pct(self) -> float:
+        """Share of material cost left unchanged for lack of a factor."""
+        if self.total_material_cost == 0:
+            return 0.0
+        return self.unmatched_material_cost / self.total_material_cost * 100.0
+
+
+@dataclass(frozen=True)
 class EstimationResult:
     """Everything the dashboard + CSV need from one re-estimation run."""
 

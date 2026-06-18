@@ -33,7 +33,8 @@ def render_progress_sidebar() -> None:
     try:
         cur_i = STEPS.index(current)
     except ValueError:
-        cur_i = 0
+        # Pre-workflow (welcome screen): nothing is current, all steps upcoming.
+        cur_i = -1
     st.sidebar.markdown("#### Progress")
     html = []
     for i, step in enumerate(STEPS):

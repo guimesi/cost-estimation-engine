@@ -18,9 +18,14 @@ def _click(at, label):
     raise AssertionError(f"button {label!r} not found; have {[b.label for b in at.button]}")
 
 
-def test_step1_renders_without_error():
+def test_welcome_is_the_landing_screen():
     at = AppTest.from_file(APP).run()
     assert not at.exception
+    assert at.session_state["current_step"] == "welcome"
+    assert any("Welcome" in m.value for m in at.subheader)
+    # Pressing play enters the (numbered) workflow at step 1.
+    at.button(key="start_btn").click().run()
+    assert at.session_state["current_step"] == "project_selection"
     assert any("Select a project" in m.value for m in at.subheader)
 
 
@@ -28,10 +33,14 @@ def test_full_click_flow_to_results():
     at = AppTest.from_file(APP).run()
     pid = list_projects()[0].project_id
 
-    # Step 1: select a project, then advance.
-    at.button(key=f"pick_{pid}").click().run()
+    # Step 0: welcome -> press play to start.
+    at.button(key="start_btn").click().run()
+    assert at.session_state["current_step"] == "project_selection"
+
+    # Step 1: select a project (the id any layout sets), then advance.
+    at.session_state["selected_project_id"] = pid
+    at.run()
     assert not at.exception
-    assert at.session_state["selected_project_id"] == pid
     _click(at, "Next →")
     assert at.session_state["current_step"] == "parameters"
 
@@ -46,9 +55,9 @@ def test_full_click_flow_to_results():
     assert at.session_state["current_step"] == "results"
     assert at.session_state["result"] is not None
 
-    # Results: Restart resets everything back to the start.
+    # Results: Restart resets everything back to the welcome landing.
     _click(at, "Restart")
-    assert at.session_state["current_step"] == "project_selection"
+    assert at.session_state["current_step"] == "welcome"
     assert at.session_state["selected_project_id"] is None
     assert at.session_state["result"] is None
 

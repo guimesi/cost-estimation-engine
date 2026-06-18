@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui import step_parameters, step_project_selection, step_results
+from ui import step_parameters, step_project_selection, step_results, step_welcome
 from ui._theme import inject_global_css
 from utils.session_state import (
     consume_scroll_to_top,
@@ -32,6 +32,7 @@ st.set_page_config(
 )
 
 STEP_RENDERERS = {
+    "welcome": step_welcome.render,
     "project_selection": step_project_selection.render,
     "parameters": step_parameters.render,
     "results": step_results.render,
