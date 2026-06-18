@@ -38,10 +38,18 @@ tables land in Snowflake. With `EMMA_SOURCE=excel`, drop the two workbooks in
 Tests always run against `mock` (autouse fixture in `tests/conftest.py` pins
 both `data_source` and `emma_source` to `mock`).
 
-## The workflow (3 steps)
+## The workflow (welcome + 3 steps)
 
 `utils/session/state.py::STEPS` = `project_selection` -> `parameters` ->
 `results`. `app.py` routes `current_step` to the matching `ui/step_*.render`.
+
+A `welcome` landing screen (`ui/step_welcome.py`) precedes the flow and is the
+initial `current_step`. It is deliberately NOT in `STEPS`: `STEPS` is the
+*numbered* workflow (the sidebar stepper and each step's "1./2./3." heading), so
+the landing sits at "step 0" outside that numbering (`WELCOME_STEP` constant).
+Its "▶ Start" button `goto`s `STEPS[0]`. `restart_app`/`clear_run_state` reset
+back to the `welcome` landing (so "Restart" returns to step 0). The stepper
+shows all-todo when `current_step` isn't in `STEPS`.
 
 1. `step_project_selection` - pick a project with ADR estimations (latest
    snapshot). Sets `selected_project_id`.
@@ -72,16 +80,19 @@ src/
   emma_excel.py                # EMMA_SOURCE=excel loader; routes workbooks to
                                #   material/labor frames by COLUMNS, not filename
   estimation_engine.py         # estimate_lines (vectorized) + run_estimation
+  diagnostics.py               # mfc_coverage: pre-flight MFC factor coverage
   csv_export.py                # build_lines_csv / build_summary_csv
 ui/
   _theme.py                    # one global stylesheet
+  _data.py                     # st.cache_data wrappers over the src data layer
+  step_welcome.py              # step 0: landing screen + "▶ Start"
   step_project_selection.py / step_parameters.py / step_results.py
 utils/
   colors.py                    # STATUS_GREEN/YELLOW/RED (single source)
-  helpers.py                   # fmt_money/fmt_hours/fmt_pct + delta_color
+  helpers.py                   # fmt_money/fmt_hours/fmt_pct(+_change) + delta_color(_from)
   session_state.py             # slim re-export shim over utils/session/*
   session/                     # state.py / navigation.py / sidebar.py
-tests/                         # 39 tests, ~95% coverage
+tests/                         # pytest + ruff, ~95% coverage
 ```
 
 ## Calculation rules (the core contract)

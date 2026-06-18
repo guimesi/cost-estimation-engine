@@ -4,7 +4,14 @@ from __future__ import annotations
 import math
 
 from utils.colors import STATUS_GREEN, STATUS_RED, STATUS_YELLOW
-from utils.helpers import delta_color, fmt_hours, fmt_money, fmt_pct
+from utils.helpers import (
+    delta_color,
+    delta_color_from,
+    fmt_hours,
+    fmt_money,
+    fmt_pct,
+    fmt_pct_change,
+)
 
 
 def test_fmt_money():
@@ -29,3 +36,21 @@ def test_delta_color_semantics():
     assert delta_color(-5.0) == STATUS_GREEN   # cost down = good
     assert delta_color(0.0) == STATUS_YELLOW   # flat
     assert delta_color(math.nan) == STATUS_YELLOW
+
+
+def test_fmt_pct_change():
+    assert fmt_pct_change(100.0, 120.0) == "+20.0%"
+    assert fmt_pct_change(100.0, 80.0) == "-20.0%"
+    # Zero baseline: a value appearing from nothing is "new", staying zero "0.0%".
+    assert fmt_pct_change(0.0, 50.0) == "new"
+    assert fmt_pct_change(0.0, 0.0) == "0.0%"
+    assert fmt_pct_change(math.nan, 50.0) == "new"
+
+
+def test_delta_color_from_semantics():
+    assert delta_color_from(100.0, 120.0) == STATUS_RED
+    assert delta_color_from(100.0, 80.0) == STATUS_GREEN
+    assert delta_color_from(100.0, 100.0) == STATUS_YELLOW
+    # Zero baseline: appearing from nothing counts as an increase (red).
+    assert delta_color_from(0.0, 50.0) == STATUS_RED
+    assert delta_color_from(0.0, 0.0) == STATUS_YELLOW

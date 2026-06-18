@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.adr_repository import list_projects
+from ui._data import list_projects
 from utils.session.navigation import next_step, restart_app
 from utils.session.state import set_project
 

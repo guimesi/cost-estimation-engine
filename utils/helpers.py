@@ -40,3 +40,36 @@ def delta_color(pct_change: float) -> str:
     if pct_change < -0.05:
         return STATUS_GREEN
     return STATUS_YELLOW
+
+
+def _is_zero_baseline(original: float) -> bool:
+    """True when the original is missing or zero (percentage is undefined)."""
+    if original is None:
+        return True
+    if isinstance(original, float) and math.isnan(original):
+        return True
+    return original == 0
+
+
+def fmt_pct_change(original: float, updated: float) -> str:
+    """Percent-change label that names the zero-baseline cases instead of NaN.
+
+    When the original is zero, a percentage is undefined: a non-zero updated
+    value is shown as ``new`` (appeared from nothing) and a still-zero updated
+    value as ``0.0%``. Otherwise the signed percentage, e.g. ``+4.2%``.
+    """
+    if _is_zero_baseline(original):
+        return "new" if updated else "0.0%"
+    return fmt_pct((updated - original) / original * 100.0)
+
+
+def delta_color_from(original: float, updated: float) -> str:
+    """Delta colour from raw original/updated, handling the zero baseline.
+
+    A value that appears from a zero baseline counts as an increase (red);
+    a still-zero value is flat (yellow). Otherwise delegates to
+    :func:`delta_color` on the percentage change.
+    """
+    if _is_zero_baseline(original):
+        return STATUS_RED if updated else STATUS_YELLOW
+    return delta_color((updated - original) / original * 100.0)

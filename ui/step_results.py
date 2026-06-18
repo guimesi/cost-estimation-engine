@@ -5,11 +5,23 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from config.schema import (
+    COL_DESCRIPTION,
+    COL_ITEM_ID,
+    COL_TOTAL_COST_NEW,
+    COL_TOTAL_COST_ORIG,
+    COL_TOTAL_HOURS_NEW,
+    COL_TOTAL_HOURS_ORIG,
+    COL_WBS,
+)
 from src.csv_export import build_lines_csv, build_summary_csv
 from src.models import Comparison, EstimationResult
-from utils.colors import STATUS_GREEN, STATUS_RED
-from utils.helpers import delta_color, fmt_hours, fmt_money, fmt_pct
+from utils.helpers import delta_color_from, fmt_hours, fmt_money, fmt_pct_change
 from utils.session.navigation import prev_step, restart_app
+
+# Neutral baseline fill for the "Original" series (not a status colour, so it
+# stays a local literal rather than living in utils.colors).
+_NEUTRAL_GRAY = "#94a3b8"
 
 
 def render() -> None:
@@ -31,6 +43,9 @@ def render() -> None:
     _render_chart("Cost by category (USD)", result.cost_categories)
     _render_category_breakdown("Hours by category", result.hour_categories, fmt_hours)
     _render_chart("Hours by category", result.hour_categories)
+
+    st.divider()
+    _render_line_table(result)
 
     st.divider()
     _render_downloads(result)
@@ -57,8 +72,8 @@ def _total_metric(label: str, cmp: Comparison, fmt) -> None:
         f"<p>Original: <b>{fmt(cmp.original)}</b><br>"
         f"Updated: <b>{fmt(cmp.updated)}</b></p>"
         f'<p>Δ {fmt(cmp.delta)} '
-        f'<span style="color:{delta_color(cmp.pct_change)}">'
-        f"({fmt_pct(cmp.pct_change)})</span></p></div>",
+        f'<span style="color:{delta_color_from(cmp.original, cmp.updated)}">'
+        f"({fmt_pct_change(cmp.original, cmp.updated)})</span></p></div>",
         unsafe_allow_html=True,
     )
 
@@ -71,7 +86,7 @@ def _render_category_breakdown(title: str, comps, fmt) -> None:
             "Original": fmt(c.original),
             "Updated": fmt(c.updated),
             "Δ": fmt(c.delta),
-            "% change": fmt_pct(c.pct_change),
+            "% change": fmt_pct_change(c.original, c.updated),
         }
         for c in comps
     ]
@@ -80,18 +95,59 @@ def _render_category_breakdown(title: str, comps, fmt) -> None:
 
 def _render_chart(title: str, comps) -> None:
     labels = [c.label for c in comps]
+    # Colour each Updated bar by the direction of its change: a category whose
+    # cost/hours went up is red, down is green, flat/undefined yellow - the same
+    # semantics as the totals delta (utils.helpers.delta_color_from).
+    updated_colors = [delta_color_from(c.original, c.updated) for c in comps]
     fig = go.Figure()
     fig.add_bar(name="Original", x=labels, y=[c.original for c in comps],
-                marker_color="#94a3b8")
+                marker_color=_NEUTRAL_GRAY)
     fig.add_bar(name="Updated", x=labels, y=[c.updated for c in comps],
-                marker_color="#f59e0b")
+                marker_color=updated_colors)
     fig.update_layout(
         title=title, barmode="group", height=340,
         margin=dict(l=10, r=10, t=40, b=10), legend=dict(orientation="h"),
     )
     st.plotly_chart(fig, use_container_width=True)
-    # Colour cue retained for parity with utils.colors (up=red, down=green).
-    _ = (STATUS_RED, STATUS_GREEN)
+
+
+def _render_line_table(result: EstimationResult) -> None:
+    """Per-line original-vs-updated table with a text filter (item/WBS/desc)."""
+    df = result.lines
+    with st.expander(f"Line-level detail ({len(df)} items)", expanded=False):
+        query = st.text_input(
+            "Filter lines", placeholder="item id, WBS, or description…"
+        ).strip().lower()
+
+        view = df
+        if query:
+            haystack = (
+                df[COL_ITEM_ID].astype(str).str.lower()
+                + " " + df[COL_WBS].astype(str).str.lower()
+                + " " + df[COL_DESCRIPTION].astype(str).str.lower()
+            )
+            view = df[haystack.str.contains(query, regex=False)]
+            st.caption(f"{len(view)} of {len(df)} lines match.")
+
+        if view.empty:
+            st.info("No lines match the filter.")
+            return
+
+        table = pd.DataFrame(
+            {
+                "Item": view[COL_ITEM_ID].astype(str),
+                "WBS": view[COL_WBS].astype(str),
+                "Description": view[COL_DESCRIPTION].astype(str),
+                "Cost (orig)": view[COL_TOTAL_COST_ORIG].map(fmt_money),
+                "Cost (new)": view[COL_TOTAL_COST_NEW].map(fmt_money),
+                "Δ Cost": (view[COL_TOTAL_COST_NEW] - view[COL_TOTAL_COST_ORIG]).map(
+                    fmt_money
+                ),
+                "Hours (orig)": view[COL_TOTAL_HOURS_ORIG].map(fmt_hours),
+                "Hours (new)": view[COL_TOTAL_HOURS_NEW].map(fmt_hours),
+            }
+        )
+        st.dataframe(table, hide_index=True, use_container_width=True)
 
 
 def _render_downloads(result: EstimationResult) -> None:
