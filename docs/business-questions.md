@@ -91,7 +91,9 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 
 **Decision to relay (with the numbers):** are EXECUTION_SPLIT/ADR_ID additive partitions of one project scope (keep aggregating) or can they overlap/duplicate the same scope (then we need a dedup or pick-one rule, e.g., for projects like 1101168)?
 
-**Cost probe added (re-run pending):** the script now splits each duplicated WBS+name identity into same-cost (same WBS+name+databook cost in >1 split = likely true double-count) vs differing-cost (distinct items sharing a generic name). This settles the 1101168 uncertainty before the business conversation.
+**Cost-probe results (2026-06-19):** per multi-split project, same-cost (true duplicate) / diff-cost counts: 1096196 -> 0 dup; 1084329 -> 0/1; 1084351 -> 9/6; 1089342 -> 36/58; 1101168 -> **4627/437**. So in 4 of 5 projects true duplication is negligible (0, 0, 9, 36 items) and aggregating is correct. One project (1101168) has ~4.6k items identical (same WBS+name+databook cost) across its two splits -> genuine double-counting at scale.
+
+**V1 recommendation:** keep aggregating (correct for ~55/56 projects). Concrete question for the business/SME: project 1101168 has ~4,600 items identical (WBS+name+cost) across its two EXECUTION_SPLITs - is that a data error / superseded split (dedup or pick-one) or intentional (legitimately counted twice)? The answer decides the rule. Optional V1 safeguard (implement only after the semantic answer): detect + warn on projects with heavy same-cost duplication, without changing the calc.
 
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
