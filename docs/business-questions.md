@@ -81,7 +81,11 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 - 🇧🇷 Pegamos o gate mais avançado de cada projeto como "latest snapshot" (SCREEN < GATE1 < … < GATE5), não o mais recente por data. Essa ordenação está correta? O usuário deveria poder escolher um snapshot/gate específico em vez de sempre o mais recente?
 
 #### Q6 - Multiple ADRs/splits per project  ⏳ OPEN (awaiting business, 2026-06-19)
-**Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot). To give them the data to decide, run `scripts/inspect_adr_splits.py` against Snowflake: it reports how many projects have >1 ADR/split at their latest gate and whether those splits' WBS codes overlap (possible double counting if aggregated) or are disjoint (complementary partitions, where aggregating is correct). The decision to relay: when a project has multiple ADR/splits at the same gate, are they complementary partitions of one scope (aggregate = correct) or alternative estimates of the same scope (must pick one to avoid double counting)?
+**Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot).
+
+**First diagnostic run (2026-06-19, real Snowflake):** of 56 projects, 5 (9%) have >1 `EXECUTION_SPLIT` at their latest gate (51 have 1, three have 2, one has 3, one has 4). All 5 sampled multi-split projects share many WBS codes across splits (e.g., 211/509, 55/308, 155/587, 326/533, 255/497 shared), so naive aggregation risks double-counting. `ADR_ID` (the "multiple ADRs" dimension) was not yet analyzed. The script was then enhanced to also report `ADR_ID` and an item-level duplication probe (same WBS+name across splits) to distinguish true double-counting from additive partitions; re-run pending.
+
+**Decision to relay (with the numbers):** when a project has multiple EXECUTION_SPLITs / ADR_IDs at the same gate, are they additive partitions of one scope (aggregate = correct) or alternative/overlapping estimates of the same scope (must pick one to avoid double counting)?
 
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
