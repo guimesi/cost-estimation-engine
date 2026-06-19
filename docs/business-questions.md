@@ -7,7 +7,7 @@ ambiguities in the spec and from the real ADR/EMMA data. Each item lists the
 Two versions below: a **Quick version** (one line each) and a **Detailed
 version** (with context). Both are bilingual - English (🇬🇧) and Portuguese (🇧🇷).
 
-Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in._
+Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _update as answers come in._
 
 ---
 
@@ -23,7 +23,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 **B. Scope & data / Escopo e dados**
 
 5. ✅ **Latest snapshot** - 🇬🇧 CONFIRMED. Auto-pick the latest; no user choice. Order: Gate3 (newest) > Gate2 > Screen (oldest). · 🇧🇷 CONFIRMADO. Auto-seleciona o mais recente; sem escolha do usuário. Ordem: Gate3 (mais novo) > Gate2 > Screen (mais antigo).
-6. ⬜ **Multiple ADRs/splits** - 🇬🇧 Include all items at the gate, or pick a single ADR/split? · 🇧🇷 Incluir todos os itens do gate, ou escolher um único ADR/split?
+6. ⏳ **Multiple ADRs/splits** - 🇬🇧 OPEN ("need more info"). Keeping current behavior (aggregate all). Diagnostic `scripts/inspect_adr_splits.py` provided to quantify it. · 🇧🇷 ABERTA ("need more info"). Mantendo o atual (agregar tudo). Script `scripts/inspect_adr_splits.py` para quantificar.
 7. ⬜ **Offered Location/Period** - 🇬🇧 Only show combos present in *both* MFC and LRC - acceptable? · 🇧🇷 Mostrar só combinações presentes no MFC *e* no LRC - aceitável?
 8. ⬜ **EMMA file naming** - 🇬🇧 Confirm which file is material vs labor (exports came crossed). · 🇧🇷 Confirmar qual arquivo é material e qual é labor (exports vieram trocados).
 
@@ -80,7 +80,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 - 🇬🇧 We pick each project's most advanced gate as the "latest snapshot" (SCREEN < GATE1 < … < GATE5), not the most recent by date. Is that ordering correct? Should users be able to choose a specific snapshot/gate instead of always the latest?
 - 🇧🇷 Pegamos o gate mais avançado de cada projeto como "latest snapshot" (SCREEN < GATE1 < … < GATE5), não o mais recente por data. Essa ordenação está correta? O usuário deveria poder escolher um snapshot/gate específico em vez de sempre o mais recente?
 
-#### Q6 - Multiple ADRs/splits per project
+#### Q6 - Multiple ADRs/splits per project  ⏳ OPEN (awaiting business, 2026-06-19)
+**Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot). To give them the data to decide, run `scripts/inspect_adr_splits.py` against Snowflake: it reports how many projects have >1 ADR/split at their latest gate and whether those splits' WBS codes overlap (possible double counting if aggregated) or are disjoint (complementary partitions, where aggregating is correct). The decision to relay: when a project has multiple ADR/splits at the same gate, are they complementary partitions of one scope (aggregate = correct) or alternative estimates of the same scope (must pick one to avoid double counting)?
+
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
 - 🇬🇧 A PlanView project can have multiple ADR estimates/splits at the same gate. Today we include every item at the latest snapshot. Should we instead select a single ADR/split (e.g., the primary one), or is aggregating all items the intended behavior?
@@ -128,4 +130,5 @@ affect the engine (the canonical schema handles them), but worth confirming:
 
 ## Follow-ups / Próximos passos
 
+- ⏳ **Decide multiple-ADR/split handling** (Q6). 🇬🇧 Awaiting business; run `scripts/inspect_adr_splits.py` to gather the data, then decide aggregate-all vs pick-one. · 🇧🇷 Aguardando o business; rodar `scripts/inspect_adr_splits.py` para coletar os dados e decidir agregar-tudo vs escolher-um.
 - ⬜ **DQ rule: every material has a valid MFC** (from Q3). 🇬🇧 The estimation engine flags missing MFC factors per line, but a proactive data-quality rule that ensures every material code has a (valid) MFC for the relevant locations/periods belongs to the data pipeline (e.g., the sibling data-quality-app), not this engine. To be scoped separately. · 🇧🇷 O motor de estimativa sinaliza fatores MFC faltantes por linha, mas uma regra de DQ proativa que garanta que todo código de material tenha um MFC (válido) para as localidades/períodos pertence ao pipeline de dados (ex.: o data-quality-app), não a este motor. A ser escopado separadamente.
