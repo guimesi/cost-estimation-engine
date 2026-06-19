@@ -89,7 +89,9 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 
 **V1 recommendation:** keep aggregating all items (current behavior). ~91% of projects have a single split, and most multi-split ones are additive, so aggregating is right for the vast majority; switching to pick-one would break the additive cases. Flag the duplication outlier for the business/SME.
 
-**Decision to relay (with the numbers):** are EXECUTION_SPLIT/ADR_ID additive partitions of one project scope (keep aggregating) or can they overlap/duplicate the same scope (then we need a dedup or pick-one rule, e.g., for projects like 1101168)? Residual uncertainty: the WBS+name identity may over-count repeated generic names; an optional cost-equality probe on 1101168 could confirm true duplicates.
+**Decision to relay (with the numbers):** are EXECUTION_SPLIT/ADR_ID additive partitions of one project scope (keep aggregating) or can they overlap/duplicate the same scope (then we need a dedup or pick-one rule, e.g., for projects like 1101168)?
+
+**Cost probe added (re-run pending):** the script now splits each duplicated WBS+name identity into same-cost (same WBS+name+databook cost in >1 split = likely true double-count) vs differing-cost (distinct items sharing a generic name). This settles the 1101168 uncertainty before the business conversation.
 
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
