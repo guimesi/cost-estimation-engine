@@ -6,12 +6,14 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.schema import (
+    COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_DESCRIPTION,
     COL_ITEM_ID,
     COL_TOTAL_COST_NEW,
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
+    COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_WBS,
 )
 from src.csv_export import build_lines_csv, build_summary_csv
@@ -133,11 +135,16 @@ def _render_line_table(result: EstimationResult) -> None:
             st.info("No lines match the filter.")
             return
 
+        mfc_missing = (
+            view[COL_BASE_MATERIAL_FACTOR_MISSING]
+            | view[COL_VENDOR_SHOP_FAB_FACTOR_MISSING]
+        )
         table = pd.DataFrame(
             {
                 "Item": view[COL_ITEM_ID].astype(str),
                 "WBS": view[COL_WBS].astype(str),
                 "Description": view[COL_DESCRIPTION].astype(str),
+                "MFC": mfc_missing.map({True: "⚠ missing", False: ""}),
                 "Cost (orig)": view[COL_TOTAL_COST_ORIG].map(fmt_money),
                 "Cost (new)": view[COL_TOTAL_COST_NEW].map(fmt_money),
                 "Δ Cost": (view[COL_TOTAL_COST_NEW] - view[COL_TOTAL_COST_ORIG]).map(
@@ -148,6 +155,11 @@ def _render_line_table(result: EstimationResult) -> None:
             }
         )
         st.dataframe(table, hide_index=True, use_container_width=True)
+        if mfc_missing.any():
+            st.caption(
+                "⚠ MFC missing: no material factor for the selection; that line's "
+                "material cost was left unchanged (factor 1.0)."
+            )
 
 
 def _render_downloads(result: EstimationResult) -> None:

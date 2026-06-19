@@ -84,6 +84,11 @@ COL_LRC_FACTOR = "LRC_FACTOR"
 COL_LRC_USD_RATE = "LRC_USD_RATE"
 COL_BASE_MATERIAL_FACTOR = "BASE_MATERIAL_FACTOR"
 COL_VENDOR_SHOP_FAB_FACTOR = "VENDOR_SHOP_FAB_FACTOR"
+# Per-line flags: True when the line's material code had no MFC factor for the
+# selection (factor defaulted to 1.0). Distinguishes a missing factor from a
+# legitimate factor that happens to equal 1.0.
+COL_BASE_MATERIAL_FACTOR_MISSING = "BASE_MATERIAL_FACTOR_MISSING"
+COL_VENDOR_SHOP_FAB_FACTOR_MISSING = "VENDOR_SHOP_FAB_FACTOR_MISSING"
 
 # =============================================================================
 # EMMA reference columns (canonical, post-ingestion)

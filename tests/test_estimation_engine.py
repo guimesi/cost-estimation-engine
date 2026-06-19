@@ -8,6 +8,7 @@ import pytest
 
 from config.schema import (
     COL_BASE_MATERIAL_COST_NEW,
+    COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
     COL_DB_BM_C,
     COL_DB_FIELD_LABOR_C,
@@ -28,6 +29,7 @@ from config.schema import (
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
     COL_VENDOR_SHOP_FAB_COST_NEW,
+    COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_VENDOR_SHOP_FAB_MFC,
     LRC_FACTOR_MULTIPLIER,
     LRC_LOCATION,
@@ -86,6 +88,9 @@ def test_labor_and_material_formulas():
     # Material: cost * MFC factor
     assert r[COL_BASE_MATERIAL_COST_NEW] == pytest.approx(1200.0)
     assert r[COL_VENDOR_SHOP_FAB_COST_NEW] == pytest.approx(1800.0)
+    # Both material codes matched -> no missing-MFC flag
+    assert not r[COL_BASE_MATERIAL_FACTOR_MISSING]
+    assert not r[COL_VENDOR_SHOP_FAB_FACTOR_MISSING]
 
 
 def test_totals():
@@ -101,7 +106,11 @@ def test_missing_mfc_code_warns_and_keeps_cost():
     # C2 absent from MFC -> vendor shop fab factor falls back to 1.0
     out, warnings = estimate_lines(_one_line(), _mfc().iloc[:1], _lrc(), SELECTION)
     assert warnings and "C2" in warnings[0]
-    assert out.iloc[0][COL_VENDOR_SHOP_FAB_COST_NEW] == pytest.approx(2000.0)
+    r = out.iloc[0]
+    assert r[COL_VENDOR_SHOP_FAB_COST_NEW] == pytest.approx(2000.0)
+    # The vendor code (C2) is flagged missing; the base code (C1) is not.
+    assert r[COL_VENDOR_SHOP_FAB_FACTOR_MISSING]
+    assert not r[COL_BASE_MATERIAL_FACTOR_MISSING]
 
 
 def test_missing_lrc_raises():

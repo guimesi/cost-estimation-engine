@@ -36,6 +36,7 @@ import pandas as pd
 from config.schema import (
     COL_BASE_MATERIAL_COST_NEW,
     COL_BASE_MATERIAL_FACTOR,
+    COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
     COL_DB_BM_C,
     COL_DB_FIELD_LABOR_H,
@@ -56,6 +57,7 @@ from config.schema import (
     COL_TOTAL_HOURS_ORIG,
     COL_VENDOR_SHOP_FAB_COST_NEW,
     COL_VENDOR_SHOP_FAB_FACTOR,
+    COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_VENDOR_SHOP_FAB_MFC,
     COST_CATEGORIES,
     HOUR_CATEGORIES,
@@ -100,6 +102,11 @@ def estimate_lines(
 
     df[COL_BASE_MATERIAL_FACTOR] = df[COL_BASE_MATERIAL_MFC].map(factor_by_code)
     df[COL_VENDOR_SHOP_FAB_FACTOR] = df[COL_VENDOR_SHOP_FAB_MFC].map(factor_by_code)
+
+    # Flag the lines whose factor is missing (NaN) BEFORE defaulting to 1.0, so a
+    # missing factor is distinguishable from a real factor that equals 1.0.
+    df[COL_BASE_MATERIAL_FACTOR_MISSING] = df[COL_BASE_MATERIAL_FACTOR].isna()
+    df[COL_VENDOR_SHOP_FAB_FACTOR_MISSING] = df[COL_VENDOR_SHOP_FAB_FACTOR].isna()
 
     missing = _collect_missing_codes(df, factor_by_code)
     if missing:

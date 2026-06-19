@@ -17,7 +17,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 
 1. ✏️ **Field Labor** - 🇬🇧 NO. Spec gained a Field Labor Calculation: re-estimate with the LRC factor + USD rate, same as the other labor categories. · 🇧🇷 NAO. O spec ganhou uma seção de cálculo: reestimar com o fator LRC + taxa USD, igual às outras categorias de labor. **Done.**
 2. ✅ **Single LRC factor** - 🇬🇧 CONFIRMED. One LRC factor + USD rate per (location, period) applies to every labor calculation; no labor-type breakdown. · 🇧🇷 CONFIRMADO. Um fator LRC + taxa USD por (location, period) vale para todo cálculo de labor; sem distinção por tipo.
-3. ⬜ **Missing MFC factor** - 🇬🇧 Code with no MFC factor → keep cost unchanged + warn, or another rule? · 🇧🇷 Código sem fator MFC → manter custo inalterado + avisar, ou outra regra?
+3. ✏️ **Missing MFC factor** - 🇬🇧 Keep unchanged (factor 1.0) + flag it; added a per-line missing-MFC flag (CSV + results). DQ rule = separate follow-up. · 🇧🇷 Manter inalterado (fator 1.0) + sinalizar; adicionado flag por linha (CSV + resultados). Regra de DQ = follow-up separado. **Done.**
 4. ⬜ **QUANTITY** - 🇬🇧 Are `DB_*` values already line totals, or should we multiply by QUANTITY? · 🇧🇷 Os valores `DB_*` já são totais por linha, ou devemos multiplicar por QUANTITY?
 
 **B. Scope & data / Escopo e dados**
@@ -54,7 +54,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 - 🇬🇧 LRC has one factor/USD rate per Location+Period with no labor-type breakdown. We apply that same pair to both Specialty Subcontractor and Field Shop Fabrication. Is a single labor factor for both categories correct, or should each labor category have its own?
 - 🇧🇷 O LRC tem um fator/taxa USD por Location+Period, sem distinção por tipo de labor. Aplicamos o mesmo par às duas categorias (Specialty Subcontractor e Field Shop Fabrication). Um único fator de labor para ambas está correto, ou cada categoria deveria ter o seu?
 
-#### Q3 - Material code with no MFC factor
+#### Q3 - Material code with no MFC factor  ✏️ RESOLVED (2026-06-19)
+**Resolution:** keep the line and leave its material cost unchanged (factor 1.0), and flag it. Confirmed, plus we now emit an explicit per-line flag (`BASE_MATERIAL_FACTOR_MISSING` / `VENDOR_SHOP_FAB_FACTOR_MISSING`) in the line-level CSV and a "⚠ MFC missing" marker in the step-3 line table, on top of the existing aggregate warning and step-2 coverage preview. The suggested data-quality rule (ensure every material has a valid MFC) is recorded as a separate follow-up (see Follow-ups), owned by the data pipeline rather than the estimation engine.
+
 **Current behavior:** if a line's material code has no MFC factor for the selected Location/Period, the cost is left unchanged (factor = 1.0) and a warning is shown; the line is never dropped.
 
 - 🇬🇧 When a material code has no MFC match for the chosen Location/Period, we keep the original cost (factor 1.0) and flag it. Is "leave unchanged + warn" the right business behavior, or should we instead: block the run, use a default/fallback factor, exclude those lines, or route them to manual review?
@@ -117,3 +119,9 @@ affect the engine (the canonical schema handles them), but worth confirming:
 - 🇧🇷 A tabela de input de *Field Shop Fabrication* rotula os inputs errado (lista `DB_BASE_MATERIAL_COST` / `BASE_MATERIAL_MFC`), mas a fórmula e o engine usam corretamente `DB_FSF_H` com o fator de labor do **LRC**, não MFC.
 - 🇬🇧 In the totals table, Field Labor uses the label `FL_C` for both hours and cost; the engine separates `DB_FIELD_LABOR_H` and `DB_FIELD_LABOR_C`.
 - 🇧🇷 Na tabela de totais, Field Labor usa o rótulo `FL_C` tanto para horas quanto para custo; o engine separa `DB_FIELD_LABOR_H` e `DB_FIELD_LABOR_C`.
+
+---
+
+## Follow-ups / Próximos passos
+
+- ⬜ **DQ rule: every material has a valid MFC** (from Q3). 🇬🇧 The estimation engine flags missing MFC factors per line, but a proactive data-quality rule that ensures every material code has a (valid) MFC for the relevant locations/periods belongs to the data pipeline (e.g., the sibling data-quality-app), not this engine. To be scoped separately. · 🇧🇷 O motor de estimativa sinaliza fatores MFC faltantes por linha, mas uma regra de DQ proativa que garanta que todo código de material tenha um MFC (válido) para as localidades/períodos pertence ao pipeline de dados (ex.: o data-quality-app), não a este motor. A ser escopado separadamente.

@@ -153,9 +153,15 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
      re-opening a project instant.
    The engine and UI never change - all of this lives in the repo + schema.
 4. **Missing MFC factor for a line's code** -> factor `1.0` (cost unchanged)
-   plus a recorded warning, never a dropped line. **Missing LRC** for the
-   selection raises `LookupError` (a guard - the UI only offers selections
-   present in both references).
+   plus a recorded warning, never a dropped line (confirmed by business Q3,
+   2026-06-19). Each line ALSO carries an explicit
+   `BASE_MATERIAL_FACTOR_MISSING` / `VENDOR_SHOP_FAB_FACTOR_MISSING` flag
+   (in the CSV + the step-3 line table) so a missing factor is distinguishable
+   from a real factor that equals 1.0. (A broader data-quality rule ensuring
+   every material has a valid MFC is a separate follow-up, owned by the data
+   pipeline, not this engine.) **Missing LRC** for the selection raises
+   `LookupError` (a guard - the UI only offers selections present in both
+   references).
 
 ## Patterns to follow (inherited from data-quality-app)
 
