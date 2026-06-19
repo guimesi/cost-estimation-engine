@@ -16,7 +16,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 **A. Calculation logic / Lógica de cálculo**
 
 1. ✏️ **Field Labor** - 🇬🇧 NO. Spec gained a Field Labor Calculation: re-estimate with the LRC factor + USD rate, same as the other labor categories. · 🇧🇷 NAO. O spec ganhou uma seção de cálculo: reestimar com o fator LRC + taxa USD, igual às outras categorias de labor. **Done.**
-2. ⬜ **Single LRC factor** - 🇬🇧 One LRC factor + USD rate for *both* labor categories - correct? · 🇧🇷 Um único fator LRC + taxa USD para as *duas* categorias de labor - correto?
+2. ✅ **Single LRC factor** - 🇬🇧 CONFIRMED. One LRC factor + USD rate per (location, period) applies to every labor calculation; no labor-type breakdown. · 🇧🇷 CONFIRMADO. Um fator LRC + taxa USD por (location, period) vale para todo cálculo de labor; sem distinção por tipo.
 3. ⬜ **Missing MFC factor** - 🇬🇧 Code with no MFC factor → keep cost unchanged + warn, or another rule? · 🇧🇷 Código sem fator MFC → manter custo inalterado + avisar, ou outra regra?
 4. ⬜ **QUANTITY** - 🇬🇧 Are `DB_*` values already line totals, or should we multiply by QUANTITY? · 🇧🇷 Os valores `DB_*` já são totais por linha, ou devemos multiplicar por QUANTITY?
 
@@ -46,7 +46,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 - 🇬🇧 The spec defines re-estimation factors for Specialty Subcontractor, Field Shop Fabrication, Base Material and Vendor Shop Fabrication, but **not** for Field Labor - so it stays equal to the databook value and never changes with Location/Period. Is that intended? If Field Labor *should* be adjusted, which factor applies (the LRC labor multiplier? the USD rate conversion? a separate factor)?
 - 🇧🇷 O spec define fatores de reestimativa para Specialty Subcontractor, Field Shop Fabrication, Base Material e Vendor Shop Fabrication, mas **não** para Field Labor - então ele fica igual ao databook e nunca muda com Location/Period. Isso é intencional? Se Field Labor *deve* ser ajustado, qual fator se aplica (o multiplicador de labor do LRC? a conversão pela taxa USD? um fator separado)?
 
-#### Q2 - Single LRC factor for both labor categories
+#### Q2 - Single LRC factor for both labor categories  ✅ CONFIRMED (2026-06-19)
+**Resolution:** correct as-is. Labor calculations apply the LRC factor to the databook hours and multiply by the USD rate; the LRC match considers only location and period, applying equally to every labor category (Specialty Subcontractor, Field Shop Fabrication, and now Field Labor). No change needed.
+
 **Current behavior:** the same LRC `FactorMultiplier` + `totalUSDRate` for the (Location, Period) is applied to **both** Specialty Subcontractor and Field Shop Fabrication (LRC has no labor-type code).
 
 - 🇬🇧 LRC has one factor/USD rate per Location+Period with no labor-type breakdown. We apply that same pair to both Specialty Subcontractor and Field Shop Fabrication. Is a single labor factor for both categories correct, or should each labor category have its own?
