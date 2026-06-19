@@ -7,7 +7,7 @@ ambiguities in the spec and from the real ADR/EMMA data. Each item lists the
 Two versions below: a **Quick version** (one line each) and a **Detailed
 version** (with context). Both are bilingual - English (🇬🇧) and Portuguese (🇧🇷).
 
-Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _update as answers come in._
+Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _update as answers come in._
 
 ---
 
@@ -29,7 +29,7 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 
 **C. Output & reporting / Saída e relatório**
 
-9. ⬜ **Time Period format** - 🇬🇧 Canonical granularity (year+semester?); compare multiple periods at once? · 🇧🇷 Granularidade canônica (ano+semestre?); comparar vários períodos de uma vez?
+9. ⏸ **Time Period format** (NOT sent to business) - 🇬🇧 Canonical granularity (year+semester?); compare multiple periods at once? · 🇧🇷 Granularidade canônica (ano+semestre?); comparar vários períodos de uma vez?
 10. ⏳ **Rounding & currency** - 🇬🇧 Yes, rounding rules exist; business reviewing how ADR does it, will get back. Currency sub-question still unanswered. · 🇧🇷 Sim, há regras de arredondamento; business revisando como o ADR faz, vai retornar. Sub-pergunta de moeda ainda sem resposta.
 
 ---
@@ -108,7 +108,9 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 
 ### C. Output & reporting / Saída e relatório
 
-#### Q9 - Time Period format / granularity
+#### Q9 - Time Period format / granularity  ⏸ PARKED - not sent to business
+**Status:** this question was intentionally left out of the round sent to the business (which is why their reply numbers Rounding as "Q9"). Kept here as a parked item in case it's sent later. No answer pending.
+
 **Current behavior:** period is treated as a label (e.g., year + semester like `2024-H1`); one period per run.
 
 - 🇬🇧 What is the canonical Time Period format and granularity (year + semester? quarter? month)? Do users ever need to compare multiple periods side by side in one run, or is one period per estimation enough?
