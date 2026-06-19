@@ -22,7 +22,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 
 **B. Scope & data / Escopo e dados**
 
-5. ⬜ **Latest snapshot** - 🇬🇧 "Latest" = most advanced gate (SCREEN<…<GATE5); should users pick the gate? · 🇧🇷 "Latest" = gate mais avançado (SCREEN<…<GATE5); o usuário deveria escolher o gate?
+5. ✅ **Latest snapshot** - 🇬🇧 CONFIRMED. Auto-pick the latest; no user choice. Order: Gate3 (newest) > Gate2 > Screen (oldest). · 🇧🇷 CONFIRMADO. Auto-seleciona o mais recente; sem escolha do usuário. Ordem: Gate3 (mais novo) > Gate2 > Screen (mais antigo).
 6. ⬜ **Multiple ADRs/splits** - 🇬🇧 Include all items at the gate, or pick a single ADR/split? · 🇧🇷 Incluir todos os itens do gate, ou escolher um único ADR/split?
 7. ⬜ **Offered Location/Period** - 🇬🇧 Only show combos present in *both* MFC and LRC - acceptable? · 🇧🇷 Mostrar só combinações presentes no MFC *e* no LRC - aceitável?
 8. ⬜ **EMMA file naming** - 🇬🇧 Confirm which file is material vs labor (exports came crossed). · 🇧🇷 Confirmar qual arquivo é material e qual é labor (exports vieram trocados).
@@ -72,7 +72,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 
 ### B. Scope & data / Escopo e dados
 
-#### Q5 - Definition of "latest snapshot"
+#### Q5 - Definition of "latest snapshot"  ✅ CONFIRMED (2026-06-19)
+**Resolution:** auto-pick the latest is correct; no per-gate user choice needed. EMCAPS refines costs at each milestone, so the most recent estimate is an equal-or-refined version of the previous. Gate order (per the available data): Gate3 (most recent) > Gate2 > Screen (oldest), which matches the engine's `SNAPSHOT_PRIORITY`. (Our map also keeps GATE1/GATE4/GATE5 as a harmless, forward-compatible superset.)
+
 **Current behavior:** "latest snapshot" = the most advanced stage gate per project, ranked SCREEN < GATE1 < … < GATE5 (not by calendar date). Always auto-selected.
 
 - 🇬🇧 We pick each project's most advanced gate as the "latest snapshot" (SCREEN < GATE1 < … < GATE5), not the most recent by date. Is that ordering correct? Should users be able to choose a specific snapshot/gate instead of always the latest?

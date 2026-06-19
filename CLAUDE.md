@@ -139,8 +139,10 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    - **Project = `PLANVIEW_ID`**; display name = `FILE_NAME`.
    - **Snapshot = `SNAPSHOT`** (stage-gate label, e.g. `GATE3`), ranked by
      `SNAPSHOT_PRIORITY` (SCREEN < GATE1 < ... < GATE3); "latest snapshot" =
-     highest-ranked gate per project. `ProjectRef.snapshot_id` is therefore
-     `int | str` (gate label in Snowflake, int in mock).
+     highest-ranked gate per project, always auto-selected (business Q5,
+     2026-06-19: Gate3 newest > Gate2 > Screen oldest; no per-gate user choice).
+     `ProjectRef.snapshot_id` is therefore `int | str` (gate label in Snowflake,
+     int in mock).
    - Some databook values arrive as **strings** ("0", "9.47") and are coerced.
    - **Reads are pushed to Snowflake, not pulled whole** (the real base is ~800k
      rows × dozens of columns): `list_projects` runs a `GROUP BY PLANVIEW_ID,
