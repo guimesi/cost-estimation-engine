@@ -24,7 +24,7 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 
 5. ✅ **Latest snapshot** - 🇬🇧 CONFIRMED. Auto-pick the latest; no user choice. Order: Gate3 (newest) > Gate2 > Screen (oldest). · 🇧🇷 CONFIRMADO. Auto-seleciona o mais recente; sem escolha do usuário. Ordem: Gate3 (mais novo) > Gate2 > Screen (mais antigo).
 6. ⏳ **Multiple ADRs/splits** - 🇬🇧 OPEN ("need more info"). Keeping current behavior (aggregate all). Diagnostic `scripts/inspect_adr_splits.py` provided to quantify it. · 🇧🇷 ABERTA ("need more info"). Mantendo o atual (agregar tudo). Script `scripts/inspect_adr_splits.py` para quantificar.
-7. ⬜ **Offered Location/Period** - 🇬🇧 Only show combos present in *both* MFC and LRC - acceptable? · 🇧🇷 Mostrar só combinações presentes no MFC *e* no LRC - aceitável?
+7. ✏️ **Offered Location/Period** - 🇬🇧 V1: partial coverage already selectable + flagged (Q3); zero-MFC combos stay unselectable but are now surfaced for SME follow-up. Full policy = SME. · 🇧🇷 V1: cobertura parcial já selecionável + sinalizada (Q3); combos sem MFC continuam não selecionáveis mas agora aparecem para follow-up com SME. Política final = SME.
 8. ⬜ **EMMA file naming** - 🇬🇧 Confirm which file is material vs labor (exports came crossed). · 🇧🇷 Confirmar qual arquivo é material e qual é labor (exports vieram trocados).
 
 **C. Output & reporting / Saída e relatório**
@@ -88,7 +88,11 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 - 🇬🇧 A PlanView project can have multiple ADR estimates/splits at the same gate. Today we include every item at the latest snapshot. Should we instead select a single ADR/split (e.g., the primary one), or is aggregating all items the intended behavior?
 - 🇧🇷 Um projeto PlanView pode ter múltiplos ADRs/splits no mesmo gate. Hoje incluímos todos os itens do snapshot mais recente. Deveríamos selecionar um único ADR/split (ex.: o principal), ou agregar todos os itens é o comportamento desejado?
 
-#### Q7 - Offered (Location, Period) pairs
+#### Q7 - Offered (Location, Period) pairs  ✏️ PARTIAL / SME follow-up (2026-06-19)
+**Clarification:** the original "partial material coverage is hidden" framing was inaccurate. A pair is offered if it's in LRC AND has at least one MFC row, so **partial** coverage IS already selectable, and its missing codes are already flagged per line (Q3). Only pairs with LRC but **zero** MFC rows are hidden.
+
+**Resolution (V1):** material should always have a corresponding MFC (else the estimate is inaccurate), so we keep zero-MFC combos unselectable rather than letting users run inaccurate estimates. To still gather real examples for the SME follow-up, `labor_only_selections()` now surfaces those LRC-only pairs in step 2 (an expander listing them, not selectable). The full policy for partial/zero coverage stays a follow-up with the data owners/SMEs.
+
 **Current behavior:** the dropdowns only offer (Location, Period) pairs present in **both** MFC and LRC references (the intersection), guaranteeing a valid labor lookup.
 
 - 🇬🇧 We only let users pick Location/Period combinations that exist in both MFC and LRC. A combo with labor (LRC) but only partial material (MFC) coverage is hidden entirely. Is that acceptable, or should such combos be selectable (with the missing-material warning)?
@@ -130,5 +134,6 @@ affect the engine (the canonical schema handles them), but worth confirming:
 
 ## Follow-ups / Próximos passos
 
+- ⏳ **SME follow-up: partial/zero material coverage policy** (Q7). 🇬🇧 Decide what should happen when a (Location, Period) lacks material (MFC) coverage; the app now surfaces the labor-only combos as examples. · 🇧🇷 Definir o que fazer quando um (Location, Period) não tem cobertura de material (MFC); o app já mostra os combos labor-only como exemplos.
 - ⏳ **Decide multiple-ADR/split handling** (Q6). 🇬🇧 Awaiting business; run `scripts/inspect_adr_splits.py` to gather the data, then decide aggregate-all vs pick-one. · 🇧🇷 Aguardando o business; rodar `scripts/inspect_adr_splits.py` para coletar os dados e decidir agregar-tudo vs escolher-um.
 - ⬜ **DQ rule: every material has a valid MFC** (from Q3). 🇬🇧 The estimation engine flags missing MFC factors per line, but a proactive data-quality rule that ensures every material code has a (valid) MFC for the relevant locations/periods belongs to the data pipeline (e.g., the sibling data-quality-app), not this engine. To be scoped separately. · 🇧🇷 O motor de estimativa sinaliza fatores MFC faltantes por linha, mas uma regra de DQ proativa que garanta que todo código de material tenha um MFC (válido) para as localidades/períodos pertence ao pipeline de dados (ex.: o data-quality-app), não a este motor. A ser escopado separadamente.

@@ -79,3 +79,21 @@ def test_available_selections_accepts_injected_frames():
     sels = emma.available_selections(mfc, lrc)
     assert len(sels) == 1
     assert sels[0].location_code == "X" and sels[0].period == "P1"
+
+
+def test_labor_only_selections_are_lrc_pairs_absent_from_mfc():
+    # MFC covers (X, P1) only; LRC has (X, P1) and (Y, P1).
+    mfc = pd.DataFrame(
+        {MFC_CODE: ["C1"], MFC_LOCATION_CODE: ["X"], MFC_PERIOD: ["P1"],
+         MFC_FACTOR_VALUE: [1.0]}
+    )
+    lrc = pd.DataFrame(
+        {LRC_LOCATION: ["Loc X", "Loc Y"], LRC_LOCATION_CODE: ["X", "Y"],
+         LRC_PERIOD: ["P1", "P1"], LRC_FACTOR_MULTIPLIER: [1.1, 1.2],
+         LRC_TOTAL_USD_RATE: [50.0, 60.0]}
+    )
+    # (X, P1) is selectable; (Y, P1) is labor-only (no MFC).
+    assert [s.location_code for s in emma.available_selections(mfc, lrc)] == ["X"]
+    labor_only = emma.labor_only_selections(mfc, lrc)
+    assert len(labor_only) == 1
+    assert labor_only[0].location_code == "Y" and labor_only[0].period == "P1"

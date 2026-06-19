@@ -220,7 +220,9 @@ CI runs `ruff check` then `pytest` with `DATA_SOURCE=mock`
   period). The UI only offers those pairs, which guarantees a valid LRC lookup
   for any selection - the `LookupError` in the engine is a guard, not a normal
   path. If you bypass the UI (tests), pick a selection from
-  `available_selections()`.
+  `available_selections()`. Pairs with LRC but **no** MFC rows are deliberately
+  excluded (can't accurately re-estimate material); `labor_only_selections()`
+  exposes them and step 2 lists them as examples for an SME follow-up (Q7).
 - **Mock determinism**: every mock frame is built once at import with a
   fixed-seed RNG (`_seed(name)` via `zlib.crc32`, process-stable). The 4 ADR
   tables are projections of one master, so the join always reconstructs the

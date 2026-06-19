@@ -8,6 +8,7 @@ from src.estimation_engine import run_estimation
 from src.models import FactorSelection, ProjectRef
 from ui._data import (
     available_selections,
+    labor_only_selections,
     list_projects,
     load_lrc,
     load_mfc,
@@ -50,6 +51,28 @@ def _render_coverage(project_id: str, selection: FactorSelection) -> None:
         st.write(", ".join(cov.missing_codes))
 
 
+def _render_labor_only_note() -> None:
+    """Surface (Location, Period) pairs that have labor but no material factors.
+
+    These are not selectable (they can't be re-estimated accurately without an
+    MFC), but listing them gives the business real examples for the SME
+    follow-up on partial/zero material coverage (business Q7).
+    """
+    labor_only = labor_only_selections()
+    if not labor_only:
+        return
+    with st.expander(
+        f"⚠ {len(labor_only)} location/period combo(s) have labor but no material "
+        "factors (not selectable)"
+    ):
+        st.caption(
+            "These have an LRC labor factor but no MFC material factor, so material "
+            "can't be re-estimated. They are hidden from the selectors; listed here "
+            "as examples to follow up with the data owners/SMEs."
+        )
+        st.write(", ".join(f"{s.location_name} / {s.period}" for s in labor_only))
+
+
 def render() -> None:
     project_id = st.session_state.get("selected_project_id")
     if not project_id:
@@ -78,6 +101,7 @@ def render() -> None:
     )
 
     _render_coverage(project_id, selection)
+    _render_labor_only_note()
 
     st.divider()
     cols = st.columns([1, 1, 1, 3])

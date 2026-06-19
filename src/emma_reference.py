@@ -112,6 +112,35 @@ def available_selections(
     return out
 
 
+def labor_only_selections(
+    mfc: Optional[pd.DataFrame] = None, lrc: Optional[pd.DataFrame] = None
+) -> List[FactorSelection]:
+    """Return (Location, Period) pairs present in LRC but with NO MFC rows.
+
+    These have a valid labor factor but zero material coverage, so the engine
+    can't accurately re-estimate material for them. They are intentionally kept
+    OUT of :func:`available_selections` (not selectable), but surfaced as
+    examples for an SME follow-up on the expected behavior (business Q7).
+    """
+    mfc = load_mfc() if mfc is None else mfc
+    lrc = load_lrc() if lrc is None else lrc
+
+    mfc_pairs = set(zip(mfc[MFC_LOCATION_CODE], mfc[MFC_PERIOD]))
+    lrc_keyed = {
+        (row[LRC_LOCATION_CODE], row[LRC_PERIOD]): row[LRC_LOCATION]
+        for _, row in lrc.iterrows()
+    }
+    out: List[FactorSelection] = []
+    for (loc_code, period), loc_name in sorted(lrc_keyed.items()):
+        if (loc_code, period) not in mfc_pairs:
+            out.append(
+                FactorSelection(
+                    location_code=loc_code, location_name=loc_name, period=period
+                )
+            )
+    return out
+
+
 # =============================================================================
 # Lookups
 # =============================================================================
