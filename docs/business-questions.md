@@ -95,6 +95,8 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 
 **V1 recommendation:** keep aggregating (correct for ~55/56 projects). Concrete question for the business/SME: project 1101168 has ~4,600 items identical (WBS+name+cost) across its two EXECUTION_SPLITs - is that a data error / superseded split (dedup or pick-one) or intentional (legitimately counted twice)? The answer decides the rule. Optional V1 safeguard (implement only after the semantic answer): detect + warn on projects with heavy same-cost duplication, without changing the calc.
 
+**Sample (1101168, via `scripts/sample_split_duplicates.py`):** the two splits are named `NA` (19,977 items) and `USGC Reconfig Studies` (19,059 items) - i.e. they look like a base case vs a study scenario of the SAME scope, not two additive parts. Same-cost identities are the same item+cost in both splits (e.g. `0-215-8"-G3A-3 Demo TA` -> 5 items `[0.63,0.8,0.9,1.9,4.0]` in both); diff-cost identities are the same item re-priced by the study (e.g. `HCU-1-STRCT` -> NA 518.0 vs USGC 286.0). So summing both splits double-counts this project. (Caveat: many same-cost matches are $0 demo items that don't affect the total, but non-zero exact matches exist, so the cost double-count is real.)
+
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
 - 🇬🇧 A PlanView project can have multiple ADR estimates/splits at the same gate. Today we include every item at the latest snapshot. Should we instead select a single ADR/split (e.g., the primary one), or is aggregating all items the intended behavior?
@@ -104,6 +106,8 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 **Clarification:** the original "partial material coverage is hidden" framing was inaccurate. A pair is offered if it's in LRC AND has at least one MFC row, so **partial** coverage IS already selectable, and its missing codes are already flagged per line (Q3). Only pairs with LRC but **zero** MFC rows are hidden.
 
 **Resolution (V1):** material should always have a corresponding MFC (else the estimate is inaccurate), so we keep zero-MFC combos unselectable rather than letting users run inaccurate estimates. To still gather real examples for the SME follow-up, `labor_only_selections()` now surfaces those LRC-only pairs in step 2 (an expander listing them, not selectable). The full policy for partial/zero coverage stays a follow-up with the data owners/SMEs.
+
+**Real-data check (via `scripts/inspect_labor_only.py`):** the case is real. Of the EMMA pairs, 225 are in both MFC and LRC, **5 are labor-only** (LRC, no MFC) - Philippines (PH.BTN_P)/4Q2024, Montana (US.BIL_P)/2Q2024 and /4Q2024, Wyoming (US.LBB_P)/2Q2024 and /4Q2024 - and 64 are material-only (MFC, no LRC, also excluded). So the SME question can name these 5 specific combos. (Aside: periods are quarterly, e.g. `2Q2024`, not semesters - relevant if Q9 Time Period is revisited.)
 
 **Current behavior:** the dropdowns only offer (Location, Period) pairs present in **both** MFC and LRC references (the intersection), guaranteeing a valid labor lookup.
 
