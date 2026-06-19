@@ -25,7 +25,7 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 5. ✅ **Latest snapshot** - 🇬🇧 CONFIRMED. Auto-pick the latest; no user choice. Order: Gate3 (newest) > Gate2 > Screen (oldest). · 🇧🇷 CONFIRMADO. Auto-seleciona o mais recente; sem escolha do usuário. Ordem: Gate3 (mais novo) > Gate2 > Screen (mais antigo).
 6. ⏳ **Multiple ADRs/splits** - 🇬🇧 OPEN ("need more info"). Keeping current behavior (aggregate all). Diagnostic `scripts/inspect_adr_splits.py` provided to quantify it. · 🇧🇷 ABERTA ("need more info"). Mantendo o atual (agregar tudo). Script `scripts/inspect_adr_splits.py` para quantificar.
 7. ✏️ **Offered Location/Period** - 🇬🇧 V1: partial coverage already selectable + flagged (Q3); zero-MFC combos stay unselectable but are now surfaced for SME follow-up. Full policy = SME. · 🇧🇷 V1: cobertura parcial já selecionável + sinalizada (Q3); combos sem MFC continuam não selecionáveis mas agora aparecem para follow-up com SME. Política final = SME.
-8. ⬜ **EMMA file naming** - 🇬🇧 Confirm which file is material vs labor (exports came crossed). · 🇧🇷 Confirmar qual arquivo é material e qual é labor (exports vieram trocados).
+8. ✅ **EMMA file naming** - 🇬🇧 CONFIRMED. Ignore filenames, route by content: labor has USD rates, material has codes. Exactly what the loader does. · 🇧🇷 CONFIRMADO. Ignorar nomes, rotear pelo conteúdo: labor tem USD rates, material tem códigos. Exatamente o que o loader faz.
 
 **C. Output & reporting / Saída e relatório**
 
@@ -98,7 +98,9 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 - 🇬🇧 We only let users pick Location/Period combinations that exist in both MFC and LRC. A combo with labor (LRC) but only partial material (MFC) coverage is hidden entirely. Is that acceptable, or should such combos be selectable (with the missing-material warning)?
 - 🇧🇷 Só deixamos o usuário escolher combinações de Location/Period presentes tanto no MFC quanto no LRC. Uma combinação com labor (LRC) mas cobertura parcial de material (MFC) fica totalmente oculta. Isso é aceitável, ou tais combinações deveriam ser selecionáveis (com o aviso de material faltante)?
 
-#### Q8 - EMMA files with inverted names
+#### Q8 - EMMA files with inverted names  ✅ CONFIRMED (2026-06-19)
+**Resolution:** ignore the filenames and route by content. The rule from the business: labor factors contain USD rates; material factors contain codes. This is exactly what `src/emma_excel.py::_classify` already does (a `code` column -> material; `totalUSDRate`/`factorMultiplier` -> labor). No change needed.
+
 **Current behavior:** the real `MFC.xlsx` / `LRC.xlsx` exports were observed with their contents swapped (the file named MFC held the labor columns). The loader routes each file by its columns, not its filename.
 
 - 🇬🇧 The two EMMA exports came with contents crossed (the file named "MFC" contained labor columns and vice-versa). We currently classify each workbook by its columns to stay correct either way. Can you confirm the authoritative mapping (which file holds material vs labor), and will the eventual Snowflake tables follow the documented naming?

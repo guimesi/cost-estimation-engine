@@ -33,7 +33,9 @@ tables land in Snowflake. With `EMMA_SOURCE=excel`, drop the two workbooks in
 > and vice-versa). So the Excel loader **routes each file by its columns, not
 > its filename**: a workbook with a `code` column -> Material/MFC frame; a
 > workbook with `factorMultiplier`+`totalUSDRate` (no code) -> Labor/LRC frame.
-> Correct under either naming; the engine and schema were NOT renamed.
+> Correct under either naming; the engine and schema were NOT renamed. (business
+> Q8, 2026-06-19: confirmed - ignore filenames, route by content: labor has USD
+> rates, material has codes.)
 
 Tests always run against `mock` (autouse fixture in `tests/conftest.py` pins
 both `data_source` and `emma_source` to `mock`).
