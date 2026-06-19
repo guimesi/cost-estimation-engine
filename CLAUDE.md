@@ -102,13 +102,13 @@ Implemented in `src/estimation_engine.py::estimate_lines`, vectorized:
 
 ```
 # Labor (LRC factor F + USD rate USD_R for the selected location/period,
-# applied to BOTH labor categories):
-SPEC_H_NEW = DB_SPEC_H * F     SPEC_COST_NEW = SPEC_H_NEW * USD_R
-FSF_H_NEW  = DB_FSF_H  * F     FSF_COST_NEW  = FSF_H_NEW  * USD_R
+# applied to ALL THREE labor categories):
+SPEC_H_NEW        = DB_SPEC_H        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
+FSF_H_NEW         = DB_FSF_H         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
+FIELD_LABOR_H_NEW = DB_FIELD_LABOR_H * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
 # Material (MFC factor matched per line code, location, period):
 BASE_MATERIAL_COST_NEW   = DB_BM_C  * F_mfc[BASE_MATERIAL_MFC]
 VENDOR_SHOP_FAB_COST_NEW = DB_VSF_C * F_mfc[VENDOR_SHOP_FAB_MFC]
-# Field Labor: pass-through (no factor)
 # Totals:
 TOTAL_HOURS_NEW = SPEC_H_NEW + FSF_H_NEW + FIELD_LABOR_H_NEW
 TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
@@ -116,12 +116,14 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
 
 ### Assumptions log (where the doc was ambiguous - confirmed with the user)
 
-1. **Field Labor is a pass-through** - the doc lists `FIELD_LABOR` /
-   `FIELD_LABOR_COST` only as totals inputs and gives no re-estimation formula,
-   so the engine carries the ADR databook values unchanged.
-2. **One LRC factor + USD rate per (location, period) applies to BOTH labor
-   categories** (Specialty Subcontractor and Field Shop Fabrication). LRC has
-   no labor-type code.
+1. **Field Labor IS re-estimated** (business Q1 answer, 2026-06-19: the spec
+   gained a Field Labor Calculation). It uses the same LRC factor F + USD rate
+   as the other labor categories: `FIELD_LABOR_H_NEW = DB_FIELD_LABOR_H * F`,
+   `FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R`. (Previously a pass-through
+   while the spec was silent; it now varies with location/period like the rest.)
+2. **One LRC factor + USD rate per (location, period) applies to ALL THREE labor
+   categories** (Specialty Subcontractor, Field Shop Fabrication, Field Labor).
+   LRC has no labor-type code.
 3. **Mock ADR table split is a modeling choice; the REAL ADR schema diverges.**
    `src/mock_data.py` builds ONE master row per item and projects it onto the 4
    tables on shared keys (`ITEM_ID`, `SNAPSHOT_ID`, `PROJECT_ID`);

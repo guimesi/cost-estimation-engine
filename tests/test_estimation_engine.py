@@ -80,9 +80,9 @@ def test_labor_and_material_formulas():
     assert r[COL_SPEC_COST_NEW] == pytest.approx(550.0)
     assert r[COL_FSF_H_NEW] == pytest.approx(22.0)
     assert r[COL_FSF_COST_NEW] == pytest.approx(1100.0)
-    # Field labor pass-through
-    assert r[COL_FIELD_LABOR_H_NEW] == pytest.approx(5.0)
-    assert r[COL_FIELD_LABOR_COST_NEW] == pytest.approx(50.0)
+    # Field labor: same LRC factor + USD rate as the other labor categories
+    assert r[COL_FIELD_LABOR_H_NEW] == pytest.approx(5.5)     # 5 * 1.1
+    assert r[COL_FIELD_LABOR_COST_NEW] == pytest.approx(275.0)  # 5.5 * 50
     # Material: cost * MFC factor
     assert r[COL_BASE_MATERIAL_COST_NEW] == pytest.approx(1200.0)
     assert r[COL_VENDOR_SHOP_FAB_COST_NEW] == pytest.approx(1800.0)
@@ -92,9 +92,9 @@ def test_totals():
     out, _ = estimate_lines(_one_line(), _mfc(), _lrc(), SELECTION)
     r = out.iloc[0]
     assert r[COL_TOTAL_HOURS_ORIG] == pytest.approx(35.0)   # 10+20+5
-    assert r[COL_TOTAL_HOURS_NEW] == pytest.approx(38.0)    # 11+22+5
+    assert r[COL_TOTAL_HOURS_NEW] == pytest.approx(38.5)    # 11+22+5.5
     assert r[COL_TOTAL_COST_ORIG] == pytest.approx(3350.0)  # 2000+100+1000+200+50
-    assert r[COL_TOTAL_COST_NEW] == pytest.approx(4700.0)   # 1800+550+1200+1100+50
+    assert r[COL_TOTAL_COST_NEW] == pytest.approx(4925.0)   # 1800+550+1200+1100+275
 
 
 def test_missing_mfc_code_warns_and_keeps_cost():
@@ -119,8 +119,8 @@ def test_run_estimation_builds_comparisons():
     project = ProjectRef("PRJ-1", "Demo", 2, 1)
     result = run_estimation(project, _one_line(), _mfc(), _lrc(), SELECTION)
     assert result.total_cost.original == pytest.approx(3350.0)
-    assert result.total_cost.updated == pytest.approx(4700.0)
-    assert result.total_cost.pct_change == pytest.approx((4700 - 3350) / 3350 * 100)
+    assert result.total_cost.updated == pytest.approx(4925.0)
+    assert result.total_cost.pct_change == pytest.approx((4925 - 3350) / 3350 * 100)
     assert {c.key for c in result.cost_categories} == {"spec", "vsf", "bm", "fsf", "fl"}
     assert {c.key for c in result.hour_categories} == {"spec", "fsf", "fl"}
 

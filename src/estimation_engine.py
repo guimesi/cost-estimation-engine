@@ -7,16 +7,15 @@ assembles an :class:`EstimationResult` with original-vs-updated comparisons.
 Calculation rules (from the business doc, with the two confirmed readings):
 
 Labor (LRC factor ``F`` + USD rate ``USD_R`` for the selected location/period,
-applied to BOTH labor categories):
-    SPEC_H_NEW  = DB_SPEC_H * F        SPEC_COST_NEW = SPEC_H_NEW * USD_R
-    FSF_H_NEW   = DB_FSF_H  * F        FSF_COST_NEW  = FSF_H_NEW  * USD_R
+applied to ALL THREE labor categories - Specialty Subcontractor, Field Shop
+Fabrication and Field Labor):
+    SPEC_H_NEW         = DB_SPEC_H        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
+    FSF_H_NEW          = DB_FSF_H         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
+    FIELD_LABOR_H_NEW  = DB_FIELD_LABOR_H * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
 
 Material (MFC factor matched per line code, location, period):
     BASE_MATERIAL_COST_NEW    = DB_BM_C  * F_mfc[BASE_MATERIAL_MFC]
     VENDOR_SHOP_FAB_COST_NEW  = DB_VSF_C * F_mfc[VENDOR_SHOP_FAB_MFC]
-
-Field Labor is a pass-through (no factor): the doc lists it only as a totals
-input and gives no re-estimation formula.
 
 Totals:
     TOTAL_HOURS_NEW = SPEC_H_NEW + FSF_H_NEW + FIELD_LABOR_H_NEW
@@ -39,7 +38,6 @@ from config.schema import (
     COL_BASE_MATERIAL_FACTOR,
     COL_BASE_MATERIAL_MFC,
     COL_DB_BM_C,
-    COL_DB_FIELD_LABOR_C,
     COL_DB_FIELD_LABOR_H,
     COL_DB_FSF_H,
     COL_DB_SPEC_H,
@@ -86,17 +84,16 @@ def estimate_lines(
         )
     f_lrc, usd_rate = lrc_match
 
-    # --- Labor: Specialty Subcontractor + Field Shop Fabrication (same LRC) ---
+    # --- Labor: Specialty Subcontractor + Field Shop Fabrication + Field Labor ---
+    # All three labor categories use the same LRC multiplier F and USD rate.
     df[COL_LRC_FACTOR] = f_lrc
     df[COL_LRC_USD_RATE] = usd_rate
     df[COL_SPEC_H_NEW] = df[COL_DB_SPEC_H] * f_lrc
     df[COL_SPEC_COST_NEW] = df[COL_SPEC_H_NEW] * usd_rate
     df[COL_FSF_H_NEW] = df[COL_DB_FSF_H] * f_lrc
     df[COL_FSF_COST_NEW] = df[COL_FSF_H_NEW] * usd_rate
-
-    # --- Field Labor: pass-through (no factor) ---
-    df[COL_FIELD_LABOR_H_NEW] = df[COL_DB_FIELD_LABOR_H]
-    df[COL_FIELD_LABOR_COST_NEW] = df[COL_DB_FIELD_LABOR_C]
+    df[COL_FIELD_LABOR_H_NEW] = df[COL_DB_FIELD_LABOR_H] * f_lrc
+    df[COL_FIELD_LABOR_COST_NEW] = df[COL_FIELD_LABOR_H_NEW] * usd_rate
 
     # --- Material: Base Material + Vendor Shop Fabrication (MFC per code) ---
     factor_by_code = mfc_factor_map(mfc, selection.location_code, selection.period)

@@ -15,7 +15,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 
 **A. Calculation logic / Lógica de cálculo**
 
-1. ⬜ **Field Labor** - 🇬🇧 Should Field Labor really stay unchanged (no factor applied)? · 🇧🇷 Field Labor deve mesmo ficar inalterado (sem fator)?
+1. ✏️ **Field Labor** - 🇬🇧 NO. Spec gained a Field Labor Calculation: re-estimate with the LRC factor + USD rate, same as the other labor categories. · 🇧🇷 NAO. O spec ganhou uma seção de cálculo: reestimar com o fator LRC + taxa USD, igual às outras categorias de labor. **Done.**
 2. ⬜ **Single LRC factor** - 🇬🇧 One LRC factor + USD rate for *both* labor categories - correct? · 🇧🇷 Um único fator LRC + taxa USD para as *duas* categorias de labor - correto?
 3. ⬜ **Missing MFC factor** - 🇬🇧 Code with no MFC factor → keep cost unchanged + warn, or another rule? · 🇧🇷 Código sem fator MFC → manter custo inalterado + avisar, ou outra regra?
 4. ⬜ **QUANTITY** - 🇬🇧 Are `DB_*` values already line totals, or should we multiply by QUANTITY? · 🇧🇷 Os valores `DB_*` já são totais por linha, ou devemos multiplicar por QUANTITY?
@@ -38,7 +38,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 
 ### A. Calculation logic / Lógica de cálculo
 
-#### Q1 - Field Labor
+#### Q1 - Field Labor  ✏️ RESOLVED (2026-06-19)
+**Resolution:** the business added a *Field Labor Calculation* to the spec. Field Labor is now re-estimated with the LRC multiplier `F` and USD rate, exactly like Specialty Subcontractor and Field Shop Fabrication: `FIELD_LABOR = DB_FL_H * F`, `FIELD_LABOR_COST = FIELD_LABOR * USD_R`. Implemented in `src/estimation_engine.py`; it now varies with Location/Period. (Doc typo noted: the Field Labor output table mislabels its rows as "Specialty Subcontractor"; the formulas are unambiguous.)
+
 **Current behavior:** Field Labor is carried through unchanged (no factor applied) - it only appears in the totals; the spec gives it no re-estimation formula.
 
 - 🇬🇧 The spec defines re-estimation factors for Specialty Subcontractor, Field Shop Fabrication, Base Material and Vendor Shop Fabrication, but **not** for Field Labor - so it stays equal to the databook value and never changes with Location/Period. Is that intended? If Field Labor *should* be adjusted, which factor applies (the LRC labor multiplier? the USD rate conversion? a separate factor)?
