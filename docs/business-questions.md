@@ -30,7 +30,7 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 **C. Output & reporting / Saída e relatório**
 
 9. ⬜ **Time Period format** - 🇬🇧 Canonical granularity (year+semester?); compare multiple periods at once? · 🇧🇷 Granularidade canônica (ano+semestre?); comparar vários períodos de uma vez?
-10. ⬜ **Rounding & currency** - 🇬🇧 Rounding/precision rules? USD only, or further conversion? · 🇧🇷 Regras de arredondamento/precisão? Só USD, ou conversão adicional?
+10. ⏳ **Rounding & currency** - 🇬🇧 Yes, rounding rules exist; business reviewing how ADR does it, will get back. Currency sub-question still unanswered. · 🇧🇷 Sim, há regras de arredondamento; business revisando como o ADR faz, vai retornar. Sub-pergunta de moeda ainda sem resposta.
 
 ---
 
@@ -114,7 +114,11 @@ Status: ⬜ open · ⏳ awaiting business · ✅ confirmed · ✏️ changed - _
 - 🇬🇧 What is the canonical Time Period format and granularity (year + semester? quarter? month)? Do users ever need to compare multiple periods side by side in one run, or is one period per estimation enough?
 - 🇧🇷 Qual é o formato e a granularidade canônicos do Time Period (ano + semestre? trimestre? mês)? Os usuários precisam comparar vários períodos lado a lado numa mesma execução, ou um período por estimativa basta?
 
-#### Q10 - Rounding, precision & currency
+#### Q10 - Rounding, precision & currency  ⏳ AWAITING business (2026-06-19)
+**Status:** business confirmed rounding rules exist and will review how ADR does it today, then get back. The currency sub-question (USD only vs further conversion) was not addressed in the reply, so it stays open too. No change for now. (Note: the business referred to this as "Q9"; in this tracking doc it is Q10. Q9 = Time Period is still open.)
+
+**Exact current rounding (to compare against ADR's rules):** on-screen money/hours are shown as whole numbers (`$1,234`, `12,340 h`) and percentages to 1 decimal; the **summary** CSV rounds ORIGINAL/UPDATED/DELTA/PCT_CHANGE to 2 decimals; the **line-level** CSV is unrounded (full precision). All amounts are USD (via the LRC `totalUSDRate`).
+
 **Current behavior:** outputs in USD; the on-screen comparison rounds to whole values, the summary CSV rounds to 2 decimals.
 
 - 🇬🇧 Are there rounding/precision rules for executive reporting and the CSV (decimals, currency formatting)? Is USD the only output currency, or is any further conversion expected beyond the LRC USD rate?
@@ -136,6 +140,7 @@ affect the engine (the canonical schema handles them), but worth confirming:
 
 ## Follow-ups / Próximos passos
 
+- ⏳ **Rounding rules + currency** (Q10). 🇬🇧 Business will return with ADR's rounding rules; also confirm USD-only vs further conversion. Current rounding documented above. · 🇧🇷 Business vai retornar com as regras de arredondamento do ADR; confirmar também só-USD vs conversão adicional. Arredondamento atual documentado acima.
 - ⏳ **SME follow-up: partial/zero material coverage policy** (Q7). 🇬🇧 Decide what should happen when a (Location, Period) lacks material (MFC) coverage; the app now surfaces the labor-only combos as examples. · 🇧🇷 Definir o que fazer quando um (Location, Period) não tem cobertura de material (MFC); o app já mostra os combos labor-only como exemplos.
 - ⏳ **Decide multiple-ADR/split handling** (Q6). 🇬🇧 Awaiting business; run `scripts/inspect_adr_splits.py` to gather the data, then decide aggregate-all vs pick-one. · 🇧🇷 Aguardando o business; rodar `scripts/inspect_adr_splits.py` para coletar os dados e decidir agregar-tudo vs escolher-um.
 - ⬜ **DQ rule: every material has a valid MFC** (from Q3). 🇬🇧 The estimation engine flags missing MFC factors per line, but a proactive data-quality rule that ensures every material code has a (valid) MFC for the relevant locations/periods belongs to the data pipeline (e.g., the sibling data-quality-app), not this engine. To be scoped separately. · 🇧🇷 O motor de estimativa sinaliza fatores MFC faltantes por linha, mas uma regra de DQ proativa que garanta que todo código de material tenha um MFC (válido) para as localidades/períodos pertence ao pipeline de dados (ex.: o data-quality-app), não a este motor. A ser escopado separadamente.
