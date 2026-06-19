@@ -83,9 +83,13 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 #### Q6 - Multiple ADRs/splits per project  ⏳ OPEN (awaiting business, 2026-06-19)
 **Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot).
 
-**First diagnostic run (2026-06-19, real Snowflake):** of 56 projects, 5 (9%) have >1 `EXECUTION_SPLIT` at their latest gate (51 have 1, three have 2, one has 3, one has 4). All 5 sampled multi-split projects share many WBS codes across splits (e.g., 211/509, 55/308, 155/587, 326/533, 255/497 shared), so naive aggregation risks double-counting. `ADR_ID` (the "multiple ADRs" dimension) was not yet analyzed. The script was then enhanced to also report `ADR_ID` and an item-level duplication probe (same WBS+name across splits) to distinguish true double-counting from additive partitions; re-run pending.
+**Diagnostic (2026-06-19, real Snowflake, `scripts/inspect_adr_splits.py`):**
+- 56 projects; 5 (9%) have >1 `EXECUTION_SPLIT` at the latest gate (51/3/1/1). `ADR_ID` has the IDENTICAL distribution, so EXECUTION_SPLIT and ADR_ID are effectively 1:1 here (one ADR per split) and affect the same 5 projects.
+- Item-level duplication probe (same WBS+name in >1 split): 1096196 -> 0; 1084329 -> 1; 1084351 -> 15; 1089342 -> 94; 1101168 -> 5064. So 4 of 5 multi-split projects are effectively ADDITIVE (splits hold different items; high WBS-code overlap was benign), and aggregating is correct. One (1101168) shows ~5k repeated item identities -> possible double-counting there.
 
-**Decision to relay (with the numbers):** when a project has multiple EXECUTION_SPLITs / ADR_IDs at the same gate, are they additive partitions of one scope (aggregate = correct) or alternative/overlapping estimates of the same scope (must pick one to avoid double counting)?
+**V1 recommendation:** keep aggregating all items (current behavior). ~91% of projects have a single split, and most multi-split ones are additive, so aggregating is right for the vast majority; switching to pick-one would break the additive cases. Flag the duplication outlier for the business/SME.
+
+**Decision to relay (with the numbers):** are EXECUTION_SPLIT/ADR_ID additive partitions of one project scope (keep aggregating) or can they overlap/duplicate the same scope (then we need a dedup or pick-one rule, e.g., for projects like 1101168)? Residual uncertainty: the WBS+name identity may over-count repeated generic names; an optional cost-equality probe on 1101168 could confirm true duplicates.
 
 **Current behavior:** a project (PLANVIEW_ID) at its latest gate may contain multiple ADR estimates/splits; we currently include all item rows at that snapshot.
 
