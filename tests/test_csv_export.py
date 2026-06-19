@@ -22,6 +22,7 @@ def test_lines_csv_has_rows_and_updated_columns():
     assert csv.count("\n") - 1 == result.n_lines  # header + one row per line
     assert "TOTAL_COST_NEW" in csv
     assert "BASE_MATERIAL_FACTOR" in csv
+    assert "QUANTITY" in csv  # shown for visualization, not used in any formula
 
 
 def test_summary_csv_has_cost_and_hours():

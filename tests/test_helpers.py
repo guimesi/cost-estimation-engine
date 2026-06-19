@@ -11,6 +11,7 @@ from utils.helpers import (
     fmt_money,
     fmt_pct,
     fmt_pct_change,
+    fmt_qty,
 )
 
 
@@ -23,6 +24,14 @@ def test_fmt_money():
 def test_fmt_hours():
     assert fmt_hours(12340) == "12,340 h"
     assert fmt_hours(None) == "-"
+
+
+def test_fmt_qty():
+    assert fmt_qty(1234) == "1,234"        # whole -> no decimals
+    assert fmt_qty(2.0) == "2"
+    assert fmt_qty(12.5) == "12.50"        # fractional -> 2 decimals
+    assert fmt_qty(None) == "-"
+    assert fmt_qty(float("nan")) == "-"
 
 
 def test_fmt_pct():

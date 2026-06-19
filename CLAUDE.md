@@ -162,6 +162,10 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    pipeline, not this engine.) **Missing LRC** for the selection raises
    `LookupError` (a guard - the UI only offers selections present in both
    references).
+5. **Databook `DB_*` values are quantity-inclusive line totals** (business Q4,
+   2026-06-19): factors are applied directly to them and the engine never
+   multiplies by `QUANTITY`. `QUANTITY` is carried for **display only** (shown
+   in the step-3 line table and the line-level CSV), not used in any formula.
 
 ## Patterns to follow (inherited from data-quality-app)
 

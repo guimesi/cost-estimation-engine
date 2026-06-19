@@ -9,6 +9,7 @@ from config.schema import (
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_DESCRIPTION,
     COL_ITEM_ID,
+    COL_QUANTITY,
     COL_TOTAL_COST_NEW,
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
@@ -18,7 +19,7 @@ from config.schema import (
 )
 from src.csv_export import build_lines_csv, build_summary_csv
 from src.models import Comparison, EstimationResult
-from utils.helpers import delta_color_from, fmt_hours, fmt_money, fmt_pct_change
+from utils.helpers import delta_color_from, fmt_hours, fmt_money, fmt_pct_change, fmt_qty
 from utils.session.navigation import prev_step, restart_app
 
 # Neutral baseline fill for the "Original" series (not a status colour, so it
@@ -144,6 +145,7 @@ def _render_line_table(result: EstimationResult) -> None:
                 "Item": view[COL_ITEM_ID].astype(str),
                 "WBS": view[COL_WBS].astype(str),
                 "Description": view[COL_DESCRIPTION].astype(str),
+                "Qty": view[COL_QUANTITY].map(fmt_qty),
                 "MFC": mfc_missing.map({True: "⚠ missing", False: ""}),
                 "Cost (orig)": view[COL_TOTAL_COST_ORIG].map(fmt_money),
                 "Cost (new)": view[COL_TOTAL_COST_NEW].map(fmt_money),

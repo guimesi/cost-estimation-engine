@@ -18,7 +18,7 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 1. ✏️ **Field Labor** - 🇬🇧 NO. Spec gained a Field Labor Calculation: re-estimate with the LRC factor + USD rate, same as the other labor categories. · 🇧🇷 NAO. O spec ganhou uma seção de cálculo: reestimar com o fator LRC + taxa USD, igual às outras categorias de labor. **Done.**
 2. ✅ **Single LRC factor** - 🇬🇧 CONFIRMED. One LRC factor + USD rate per (location, period) applies to every labor calculation; no labor-type breakdown. · 🇧🇷 CONFIRMADO. Um fator LRC + taxa USD por (location, period) vale para todo cálculo de labor; sem distinção por tipo.
 3. ✏️ **Missing MFC factor** - 🇬🇧 Keep unchanged (factor 1.0) + flag it; added a per-line missing-MFC flag (CSV + results). DQ rule = separate follow-up. · 🇧🇷 Manter inalterado (fator 1.0) + sinalizar; adicionado flag por linha (CSV + resultados). Regra de DQ = follow-up separado. **Done.**
-4. ⬜ **QUANTITY** - 🇬🇧 Are `DB_*` values already line totals, or should we multiply by QUANTITY? · 🇧🇷 Os valores `DB_*` já são totais por linha, ou devemos multiplicar por QUANTITY?
+4. ✏️ **QUANTITY** - 🇬🇧 `DB_*` are already quantity-inclusive totals (no extra multiply); QUANTITY is display-only, now shown in the step-3 table + CSV. · 🇧🇷 `DB_*` já são totais com quantidade (sem multiplicar de novo); QUANTITY é só visualização, agora na tabela do step 3 + CSV. **Done.**
 
 **B. Scope & data / Escopo e dados**
 
@@ -62,7 +62,9 @@ Status: ⬜ open · ✅ confirmed · ✏️ changed - _update as answers come in
 - 🇬🇧 When a material code has no MFC match for the chosen Location/Period, we keep the original cost (factor 1.0) and flag it. Is "leave unchanged + warn" the right business behavior, or should we instead: block the run, use a default/fallback factor, exclude those lines, or route them to manual review?
 - 🇧🇷 Quando um código de material não tem fator MFC para a Location/Period escolhida, mantemos o custo original (fator 1.0) e sinalizamos. "Manter inalterado + avisar" é o comportamento correto, ou deveríamos: bloquear a execução, usar um fator padrão, excluir essas linhas, ou enviá-las para revisão manual?
 
-#### Q4 - QUANTITY usage / nature of databook costs
+#### Q4 - QUANTITY usage / nature of databook costs  ✏️ RESOLVED (2026-06-19)
+**Resolution:** the databook estimates already account for material quantities, so the `DB_*` values are line totals; the engine just adjusts them by the factors and never multiplies by QUANTITY (calculation confirmed unchanged). QUANTITY is for visualization only: it is now shown in the step-3 line-level table and included in the line-level CSV.
+
 **Current behavior:** QUANTITY is loaded but not used in any formula - the re-estimation operates directly on the databook `DB_*` cost/hour values, treated as line totals.
 
 - 🇬🇧 Our formulas apply factors directly to the databook costs/hours and don't use QUANTITY. Are the `DB_*` values already line totals (quantity-inclusive)? If they're per-unit, should the engine multiply by QUANTITY anywhere?

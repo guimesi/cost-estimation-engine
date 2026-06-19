@@ -20,6 +20,15 @@ def fmt_hours(value: float) -> str:
     return f"{value:,.0f} h"
 
 
+def fmt_qty(value: float) -> str:
+    """Format a quantity: thousands-separated, drop a trailing ``.0`` when whole."""
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return "-"
+    if float(value).is_integer():
+        return f"{value:,.0f}"
+    return f"{value:,.2f}"
+
+
 def fmt_pct(value: float) -> str:
     """Format a percentage change with sign, e.g. ``+4.2%`` / ``n/a``."""
     if value is None or (isinstance(value, float) and math.isnan(value)):
