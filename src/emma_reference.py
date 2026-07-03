@@ -112,6 +112,27 @@ def available_selections(
     return out
 
 
+def labor_selections(lrc: Optional[pd.DataFrame] = None) -> List[FactorSelection]:
+    """Return every (Location, Period) that has a valid LRC labor factor.
+
+    Labor is re-estimated from location + period alone, so any LRC pair can run;
+    material is best-effort and flagged when its MFC factor is missing (business
+    Q7, 2026-06-19: for v1, let users pick any labor pair and flag the missing
+    material reference rather than hiding the pair). This is a superset of
+    :func:`available_selections` (which also requires MFC coverage) - it adds the
+    labor-only pairs (see :func:`labor_only_selections`). The engine's LRC lookup
+    stays valid for every pair offered here; only material may be unfactored.
+    """
+    lrc = load_lrc() if lrc is None else lrc
+    names: Dict[Tuple[str, str], str] = {}
+    for _, row in lrc.iterrows():
+        names.setdefault((row[LRC_LOCATION_CODE], row[LRC_PERIOD]), row[LRC_LOCATION])
+    return [
+        FactorSelection(location_code=lc, location_name=name, period=p)
+        for (lc, p), name in sorted(names.items())
+    ]
+
+
 def labor_only_selections(
     mfc: Optional[pd.DataFrame] = None, lrc: Optional[pd.DataFrame] = None
 ) -> List[FactorSelection]:

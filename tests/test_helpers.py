@@ -16,7 +16,8 @@ from utils.helpers import (
 
 
 def test_fmt_money():
-    assert fmt_money(1234567) == "$1,234,567"
+    assert fmt_money(1234567) == "$1,234,567.00"   # 2 decimals (mirrors ADR)
+    assert fmt_money(1234.5) == "$1,234.50"
     assert fmt_money(float("nan")) == "-"
     assert fmt_money(None) == "-"
 

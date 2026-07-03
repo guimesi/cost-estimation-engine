@@ -7,10 +7,14 @@ from utils.colors import STATUS_GREEN, STATUS_RED, STATUS_YELLOW
 
 
 def fmt_money(value: float) -> str:
-    """Format a USD amount, e.g. ``$1,234,567``."""
+    """Format a USD amount to 2 decimals, e.g. ``$1,234,567.00``.
+
+    Two decimals mirror how ADR stores cost fields in Snowflake (business Q10,
+    2026-06-19).
+    """
     if value is None or (isinstance(value, float) and math.isnan(value)):
         return "-"
-    return f"${value:,.0f}"
+    return f"${value:,.2f}"
 
 
 def fmt_hours(value: float) -> str:

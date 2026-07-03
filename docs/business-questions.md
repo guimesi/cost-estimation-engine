@@ -23,14 +23,14 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 **B. Scope & data / Escopo e dados**
 
 5. ✅ **Latest snapshot** - 🇬🇧 CONFIRMED. Auto-pick the latest; no user choice. Order: Gate3 (newest) > Gate2 > Screen (oldest). · 🇧🇷 CONFIRMADO. Auto-seleciona o mais recente; sem escolha do usuário. Ordem: Gate3 (mais novo) > Gate2 > Screen (mais antigo).
-6. ⏳ **Multiple ADRs/splits** - 🇬🇧 OPEN ("need more info"). Keeping current behavior (aggregate all). Diagnostic `scripts/inspect_adr_splits.py` provided to quantify it. · 🇧🇷 ABERTA ("need more info"). Mantendo o atual (agregar tudo). Script `scripts/inspect_adr_splits.py` para quantificar.
-7. ✏️ **Offered Location/Period** - 🇬🇧 V1: partial coverage already selectable + flagged (Q3); zero-MFC combos stay unselectable but are now surfaced for SME follow-up. Full policy = SME. · 🇧🇷 V1: cobertura parcial já selecionável + sinalizada (Q3); combos sem MFC continuam não selecionáveis mas agora aparecem para follow-up com SME. Política final = SME.
+6. ✅ **Multiple ADRs/splits** - 🇬🇧 Keep current behavior: sum by Snapshot+PlanView, include splits entirely (don't use split as an aggregation splitter). Project 1101168 pinned for SME (Emanuel) review. · 🇧🇷 Manter: somar por Snapshot+PlanView, incluir splits inteiros (não usar split como separador). 1101168 com pin para revisão do SME (Emanuel).
+7. ✏️ **Offered Location/Period** - 🇬🇧 CHANGED: business wants these selectable and flagged. Any LRC pair is now selectable; missing material is flagged with a "missing from reference" message. · 🇧🇷 MUDOU: business quer selecionável e sinalizado. Qualquer par LRC agora é selecionável; material faltante é sinalizado com mensagem de "faltando na referência".
 8. ✅ **EMMA file naming** - 🇬🇧 CONFIRMED. Ignore filenames, route by content: labor has USD rates, material has codes. Exactly what the loader does. · 🇧🇷 CONFIRMADO. Ignorar nomes, rotear pelo conteúdo: labor tem USD rates, material tem códigos. Exatamente o que o loader faz.
 
 **C. Output & reporting / Saída e relatório**
 
 9. ⏸ **Time Period format** (NOT sent to business) - 🇬🇧 Canonical granularity (year+semester?); compare multiple periods at once? · 🇧🇷 Granularidade canônica (ano+semestre?); comparar vários períodos de uma vez?
-10. ⏳ **Rounding & currency** - 🇬🇧 Currency: USD only (confirmed). Rounding: rules exist; business reviewing how ADR does it, will get back. · 🇧🇷 Moeda: só USD (confirmado). Arredondamento: há regras; business revisando como o ADR faz, vai retornar.
+10. ✏️ **Rounding & currency** - 🇬🇧 Costs = 2 decimals (mirror ADR), done. Currency USD only. Still under business review: ADR may include hours inside "total cost". · 🇧🇷 Custos = 2 casas (replicar ADR), feito. Moeda só USD. Ainda em revisão do business: ADR pode incluir horas dentro do "total cost".
 
 ---
 
@@ -80,7 +80,9 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 - 🇬🇧 We pick each project's most advanced gate as the "latest snapshot" (SCREEN < GATE1 < … < GATE5), not the most recent by date. Is that ordering correct? Should users be able to choose a specific snapshot/gate instead of always the latest?
 - 🇧🇷 Pegamos o gate mais avançado de cada projeto como "latest snapshot" (SCREEN < GATE1 < … < GATE5), não o mais recente por data. Essa ordenação está correta? O usuário deveria poder escolher um snapshot/gate específico em vez de sempre o mais recente?
 
-#### Q6 - Multiple ADRs/splits per project  ⏳ OPEN (awaiting business, 2026-06-19)
+#### Q6 - Multiple ADRs/splits per project  ✅ RESOLVED for v1 + ⏳ SME pin (2026-06-19)
+**Resolution:** keep the current logic - sum costs by Snapshot + PlanView_ID and include execution splits ENTIRELY (do not use EXECUTION_SPLIT as an aggregation splitter). The business believes splits are scope partitions like ISBL/OSBL (Inside/Outside Battery Limits). Project 1101168 looks unique and possibly non-compliant (the base vs `USGC Reconfig Studies` scenario found below); it is pinned for review with an SME (Emanuel). No code change: the engine already aggregates all splits.
+
 **Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot).
 
 **Diagnostic (2026-06-19, real Snowflake, `scripts/inspect_adr_splits.py`):**
@@ -102,10 +104,10 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 - 🇬🇧 A PlanView project can have multiple ADR estimates/splits at the same gate. Today we include every item at the latest snapshot. Should we instead select a single ADR/split (e.g., the primary one), or is aggregating all items the intended behavior?
 - 🇧🇷 Um projeto PlanView pode ter múltiplos ADRs/splits no mesmo gate. Hoje incluímos todos os itens do snapshot mais recente. Deveríamos selecionar um único ADR/split (ex.: o principal), ou agregar todos os itens é o comportamento desejado?
 
-#### Q7 - Offered (Location, Period) pairs  ✏️ PARTIAL / SME follow-up (2026-06-19)
-**Clarification:** the original "partial material coverage is hidden" framing was inaccurate. A pair is offered if it's in LRC AND has at least one MFC row, so **partial** coverage IS already selectable, and its missing codes are already flagged per line (Q3). Only pairs with LRC but **zero** MFC rows are hidden.
+#### Q7 - Offered (Location, Period) pairs  ✏️ CHANGED (2026-06-19)
+**Business decision:** for v1, flag these exact errors. When a selected Location/Period lacks material factors, allow the selection and show a message stating the missing reference value. This reverses the earlier "keep hidden" call: the app now offers **every LRC (Location, Period) pair** (`labor_selections()`), and the step-2 coverage panel flags any material codes missing from the MFC reference (count, dollar exposure, and the list of missing codes), noting that labor is still re-estimated. Implemented; the old `labor_only_selections()` "hidden combos" note was removed.
 
-**Resolution (V1):** material should always have a corresponding MFC (else the estimate is inaccurate), so we keep zero-MFC combos unselectable rather than letting users run inaccurate estimates. To still gather real examples for the SME follow-up, `labor_only_selections()` now surfaces those LRC-only pairs in step 2 (an expander listing them, not selectable). The full policy for partial/zero coverage stays a follow-up with the data owners/SMEs.
+**Prior clarification (still true):** partial coverage was already selectable + flagged (Q3); this change additionally makes the fully labor-only pairs selectable.
 
 **Real-data check (via `scripts/inspect_labor_only.py`):** the case is real. Of the EMMA pairs, 225 are in both MFC and LRC, **5 are labor-only** (LRC, no MFC) - Philippines (PH.BTN_P)/4Q2024, Montana (US.BIL_P)/2Q2024 and /4Q2024, Wyoming (US.LBB_P)/2Q2024 and /4Q2024 - and 64 are material-only (MFC, no LRC, also excluded). So the SME question can name these 5 specific combos. (Aside: periods are quarterly, e.g. `2Q2024`, not semesters - relevant if Q9 Time Period is revisited.)
 
@@ -132,10 +134,10 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 - 🇬🇧 What is the canonical Time Period format and granularity (year + semester? quarter? month)? Do users ever need to compare multiple periods side by side in one run, or is one period per estimation enough?
 - 🇧🇷 Qual é o formato e a granularidade canônicos do Time Period (ano + semestre? trimestre? mês)? Os usuários precisam comparar vários períodos lado a lado numa mesma execução, ou um período por estimativa basta?
 
-#### Q10 - Rounding, precision & currency  ⏳ AWAITING business (2026-06-19)
-**Status:** currency is confirmed USD only (no further conversion beyond the LRC USD rate). Rounding rules exist; business will review how ADR does it today, then get back. No change for now. (Note: the business referred to this as "Q9"; in this tracking doc it is Q10. Q9 = Time Period is parked / not sent.)
+#### Q10 - Rounding, precision & currency  ✏️ PARTIAL (2026-06-19)
+**Resolution so far:** cost fields use 2 decimals, mirroring how ADR stores them in Snowflake (implemented: `fmt_money` now shows 2 decimals; the summary CSV already rounded to 2). Currency is USD only. **Still under business review:** ADR's "total cost" may include hours summed in with costs (a non-obvious case they are checking) - if confirmed, the total-cost composition (not just rounding) may need to change. That is tracked as a follow-up. (Note: the business referred to this as "Q9"; here it is Q10. Q9 = Time Period is parked / not sent.)
 
-**Exact current rounding (to compare against ADR's rules):** on-screen money/hours are shown as whole numbers (`$1,234`, `12,340 h`) and percentages to 1 decimal; the **summary** CSV rounds ORIGINAL/UPDATED/DELTA/PCT_CHANGE to 2 decimals; the **line-level** CSV is unrounded (full precision). All amounts are USD (via the LRC `totalUSDRate`).
+**Current rounding:** on-screen money shows 2 decimals (`$1,234.00`), hours whole (`12,340 h`), percentages 1 decimal; the **summary** CSV rounds to 2 decimals; the **line-level** CSV is unrounded (full precision). All amounts are USD (via the LRC `totalUSDRate`).
 
 **Current behavior:** outputs in USD; the on-screen comparison rounds to whole values, the summary CSV rounds to 2 decimals.
 
@@ -158,7 +160,7 @@ affect the engine (the canonical schema handles them), but worth confirming:
 
 ## Follow-ups / Próximos passos
 
-- ⏳ **Rounding rules** (Q10). 🇬🇧 Business will return with ADR's rounding rules (currency already confirmed USD-only). Current rounding documented above. · 🇧🇷 Business vai retornar com as regras de arredondamento do ADR (moeda já confirmada só-USD). Arredondamento atual documentado acima.
-- ⏳ **SME follow-up: partial/zero material coverage policy** (Q7). 🇬🇧 Decide what should happen when a (Location, Period) lacks material (MFC) coverage; the app now surfaces the labor-only combos as examples. · 🇧🇷 Definir o que fazer quando um (Location, Period) não tem cobertura de material (MFC); o app já mostra os combos labor-only como exemplos.
-- ⏳ **Decide multiple-ADR/split handling** (Q6). 🇬🇧 Awaiting business; run `scripts/inspect_adr_splits.py` to gather the data, then decide aggregate-all vs pick-one. · 🇧🇷 Aguardando o business; rodar `scripts/inspect_adr_splits.py` para coletar os dados e decidir agregar-tudo vs escolher-um.
+- ⏳ **ADR "total cost" composition** (Q10). 🇬🇧 Business is checking whether ADR sums hours into "total cost"; if so, the total-cost formula (not just rounding) may need to change. Costs-to-2-decimals is already done. · 🇧🇷 Business verificando se o ADR soma horas dentro do "total cost"; se sim, a fórmula do total (não só o arredondamento) pode mudar. Custos com 2 casas já feito.
+- ⏳ **SME pin: project 1101168 splits** (Q6). 🇬🇧 Review with Emanuel whether 1101168's `NA` vs `USGC Reconfig Studies` splits (base vs scenario, ~4.6k duplicated items) are a data issue. v1 keeps aggregating all splits. · 🇧🇷 Revisar com o Emanuel se os splits `NA` vs `USGC Reconfig Studies` do 1101168 (base vs cenário, ~4,6k itens duplicados) são problema de dado. A v1 mantém a agregação de todos os splits.
+- ⏳ **SME confirm: the 5 labor-only combos** (Q7). 🇬🇧 The app now lets these be selected and flags the missing material; confirm whether the missing MFC for Philippines/Montana/Wyoming 2024 quarters is expected or a reference gap to fill. · 🇧🇷 O app agora permite selecionar e sinaliza o material faltante; confirmar se a ausência de MFC para Philippines/Montana/Wyoming (trimestres 2024) é esperada ou uma lacuna a preencher.
 - ⬜ **DQ rule: every material has a valid MFC** (from Q3). 🇬🇧 The estimation engine flags missing MFC factors per line, but a proactive data-quality rule that ensures every material code has a (valid) MFC for the relevant locations/periods belongs to the data pipeline (e.g., the sibling data-quality-app), not this engine. To be scoped separately. · 🇧🇷 O motor de estimativa sinaliza fatores MFC faltantes por linha, mas uma regra de DQ proativa que garanta que todo código de material tenha um MFC (válido) para as localidades/períodos pertence ao pipeline de dados (ex.: o data-quality-app), não a este motor. A ser escopado separadamente.

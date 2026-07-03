@@ -218,13 +218,17 @@ CI runs `ruff check` then `pytest` with `DATA_SOURCE=mock`
 
 ## Friction points
 
-- **`available_selections` is the intersection of MFC and LRC** (location,
-  period). The UI only offers those pairs, which guarantees a valid LRC lookup
-  for any selection - the `LookupError` in the engine is a guard, not a normal
-  path. If you bypass the UI (tests), pick a selection from
-  `available_selections()`. Pairs with LRC but **no** MFC rows are deliberately
-  excluded (can't accurately re-estimate material); `labor_only_selections()`
-  exposes them and step 2 lists them as examples for an SME follow-up (Q7).
+- **The UI offers `labor_selections()` = every LRC (location, period) pair**
+  (business Q7, 2026-06-19: let users pick any labor pair and flag missing
+  material rather than hiding it). Labor is re-estimated from location+period
+  alone, so the engine's LRC lookup is valid for every offered pair (the
+  `LookupError` is a guard, not a normal path); material with no MFC factor is
+  flagged (step-2 coverage warning + per-line flag), not blocked.
+  `available_selections()` is the stricter **MFC-and-LRC intersection** (fully
+  material-covered pairs) and `labor_only_selections()` the LRC-only pairs; both
+  are kept for reference/diagnostics but the UI no longer restricts to the
+  intersection. If you bypass the UI (tests), any `labor_selections()` pair runs;
+  a pair with no MFC just yields all-material-unchanged + warnings.
 - **Mock determinism**: every mock frame is built once at import with a
   fixed-seed RNG (`_seed(name)` via `zlib.crc32`, process-stable). The 4 ADR
   tables are projections of one master, so the join always reconstructs the

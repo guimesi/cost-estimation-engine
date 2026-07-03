@@ -7,8 +7,7 @@ from src.diagnostics import mfc_coverage
 from src.estimation_engine import run_estimation
 from src.models import FactorSelection, ProjectRef
 from ui._data import (
-    available_selections,
-    labor_only_selections,
+    labor_selections,
     list_projects,
     load_lrc,
     load_mfc,
@@ -41,36 +40,16 @@ def _render_coverage(project_id: str, selection: FactorSelection) -> None:
         )
         return
 
+    material = "material factor(s) are" if cov.missing_count != 1 else "material factor is"
     st.warning(
-        f"{cov.missing_count} of {cov.total_codes} material code(s) have no MFC "
-        f"factor for {selection.label}. "
+        f"⚠ {cov.missing_count} of {cov.total_codes} {material} missing from the "
+        f"MFC (material) reference for {selection.label}. "
         f"{fmt_money(cov.unmatched_material_cost)} of material cost "
-        f"({cov.unmatched_cost_pct:.0f}%) will be left unchanged (factor 1.0)."
+        f"({cov.unmatched_cost_pct:.0f}%) will be left unchanged (factor 1.0). "
+        "Labor is still re-estimated."
     )
     with st.expander(f"Show {cov.missing_count} missing code(s)"):
         st.write(", ".join(cov.missing_codes))
-
-
-def _render_labor_only_note() -> None:
-    """Surface (Location, Period) pairs that have labor but no material factors.
-
-    These are not selectable (they can't be re-estimated accurately without an
-    MFC), but listing them gives the business real examples for the SME
-    follow-up on partial/zero material coverage (business Q7).
-    """
-    labor_only = labor_only_selections()
-    if not labor_only:
-        return
-    with st.expander(
-        f"⚠ {len(labor_only)} location/period combo(s) have labor but no material "
-        "factors (not selectable)"
-    ):
-        st.caption(
-            "These have an LRC labor factor but no MFC material factor, so material "
-            "can't be re-estimated. They are hidden from the selectors; listed here "
-            "as examples to follow up with the data owners/SMEs."
-        )
-        st.write(", ".join(f"{s.location_name} / {s.period}" for s in labor_only))
 
 
 def render() -> None:
@@ -84,9 +63,9 @@ def render() -> None:
     st.subheader("2. Location & Time Period")
     st.caption(f"Re-estimating **{project.label}** ({project.n_items} items).")
 
-    selections = available_selections()
+    selections = labor_selections()
     if not selections:
-        st.error("No EMMA factors are available (MFC/LRC reference is empty).")
+        st.error("No EMMA labor factors are available (LRC reference is empty).")
         return
 
     locations = sorted({s.location_name for s in selections})
@@ -101,7 +80,6 @@ def render() -> None:
     )
 
     _render_coverage(project_id, selection)
-    _render_labor_only_note()
 
     st.divider()
     cols = st.columns([1, 1, 1, 3])
