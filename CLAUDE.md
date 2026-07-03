@@ -170,6 +170,16 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    2026-06-19): factors are applied directly to them and the engine never
    multiplies by `QUANTITY`. `QUANTITY` is carried for **display only** (shown
    in the step-3 line table and the line-level CSV), not used in any formula.
+6. **The comparison names both estimation contexts** (doc v2, 2026-07-02,
+   section 8): the ORIGINAL side's context is the `COST_BASIS` period from the
+   ADR item record (the original *location* is not recorded in ADR, so it is
+   time-only); the NEW side's context is the user's Location + Period selection.
+   `COL_COST_BASIS` is canonical, carried on the line frame (mock derives it per
+   snapshot without consuming the RNG), summarized into
+   `EstimationResult.original_basis` (mode of non-blank values, else "n/a"), and
+   shown in the step-3 table headers, the summary CSV (`ORIGINAL_BASIS` /
+   `NEW_LOCATION_PERIOD`) and the line-level CSV. Display only - no formula
+   uses it.
 
 ## Patterns to follow (inherited from data-quality-app)
 

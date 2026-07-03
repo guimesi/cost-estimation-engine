@@ -23,6 +23,7 @@ def test_lines_csv_has_rows_and_updated_columns():
     assert "TOTAL_COST_NEW" in csv
     assert "BASE_MATERIAL_FACTOR" in csv
     assert "QUANTITY" in csv  # shown for visualization, not used in any formula
+    assert "COST_BASIS" in csv  # original estimation's time period (doc v2)
 
 
 def test_summary_csv_has_cost_and_hours():
@@ -34,3 +35,6 @@ def test_summary_csv_has_cost_and_hours():
     assert "Total Cost" in set(frame["CATEGORY"])
     assert "Total Hours" in set(frame["CATEGORY"])
     assert {"ORIGINAL", "UPDATED", "DELTA", "PCT_CHANGE"}.issubset(frame.columns)
+    # Doc v2: both estimation contexts ride along on every row.
+    assert (frame["ORIGINAL_BASIS"] == result.original_basis).all()
+    assert (frame["NEW_LOCATION_PERIOD"] == result.selection.label).all()

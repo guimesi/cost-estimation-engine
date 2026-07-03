@@ -36,6 +36,10 @@ COL_ITEM_ID = "ITEM_ID"
 COL_WBS = "WBS_CODE"
 COL_DESCRIPTION = "DESCRIPTION"
 COL_QUANTITY = "QUANTITY"
+# Time period the ORIGINAL databook estimate was priced at (doc v2 section 8:
+# the comparison shows it as the original estimation's "time"; the original
+# location is not recorded in ADR).
+COL_COST_BASIS = "COST_BASIS"
 
 # Databook (original) hours
 COL_DB_SPEC_H = "DB_SPEC_H"                  # specialty subcontractor hours
@@ -149,6 +153,7 @@ ADR_ITEM_RECORD_RENAME = {
     "SNAPSHOT": COL_SNAPSHOT_ID,
     "COMPLETE_WBC": COL_WBS,
     "ITEM_DESCRIPTION": COL_DESCRIPTION,
+    "COST_BASIS": COL_COST_BASIS,
 }
 ADR_COST_RESULTS_RENAME = {
     "ROW_ID": COL_ITEM_ID,

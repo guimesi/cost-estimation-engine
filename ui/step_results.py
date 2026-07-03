@@ -36,15 +36,27 @@ def render() -> None:
 
     st.subheader("3. Estimation result")
     st.caption(f"**{result.project.label}** · {result.selection.label} · {result.n_lines} items")
+    # Doc v2 section 8: the comparison names both contexts. The original's
+    # location is not recorded in ADR, so its context is the COST_BASIS period.
+    orig_ctx = f"ADR basis {result.original_basis}"
+    new_ctx = result.selection.label
+    st.caption(
+        f"Comparing **original** ({orig_ctx}; location not recorded in ADR) vs "
+        f"**updated** ({new_ctx})."
+    )
 
     for w in result.warnings:
         st.warning(w)
 
     _render_totals(result)
     st.divider()
-    _render_category_breakdown("Cost by category", result.cost_categories, fmt_money)
+    _render_category_breakdown(
+        "Cost by category", result.cost_categories, fmt_money, orig_ctx, new_ctx
+    )
     _render_chart("Cost by category (USD)", result.cost_categories)
-    _render_category_breakdown("Hours by category", result.hour_categories, fmt_hours)
+    _render_category_breakdown(
+        "Hours by category", result.hour_categories, fmt_hours, orig_ctx, new_ctx
+    )
     _render_chart("Hours by category", result.hour_categories)
 
     st.divider()
@@ -81,13 +93,20 @@ def _total_metric(label: str, cmp: Comparison, fmt) -> None:
     )
 
 
-def _render_category_breakdown(title: str, comps, fmt) -> None:
+def _render_category_breakdown(title: str, comps, fmt, orig_ctx: str, new_ctx: str) -> None:
+    """Per-category comparison table, with each side's context in its header.
+
+    Doc v2 section 8 asks the comparison to carry the original estimation's
+    location/time (COST_BASIS period; location missing from ADR) and the new
+    estimation's location/time (the user's selection). Both are constant per
+    run, so they live in the column headers rather than repeated per row.
+    """
     st.markdown(f"#### {title}")
     rows = [
         {
             "Category": c.label,
-            "Original": fmt(c.original),
-            "Updated": fmt(c.updated),
+            f"Original ({orig_ctx})": fmt(c.original),
+            f"Updated ({new_ctx})": fmt(c.updated),
             "Δ": fmt(c.delta),
             "% change": fmt_pct_change(c.original, c.updated),
         }

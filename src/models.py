@@ -113,6 +113,10 @@ class EstimationResult:
     total_cost: Comparison
     total_hours: Comparison
     warnings: List[str] = field(default_factory=list)
+    # Time period the ORIGINAL databook estimate was priced at (ADR COST_BASIS).
+    # The original location is not recorded in ADR (doc v2 section 8), so the
+    # original context is time-only; "n/a" when the source rows carry no basis.
+    original_basis: str = "n/a"
 
     @property
     def n_lines(self) -> int:
