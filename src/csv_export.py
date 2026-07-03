@@ -29,6 +29,7 @@ from config.schema import (
     COL_DB_SPEC_H,
     COL_DB_VSF_C,
     COL_DESCRIPTION,
+    COL_EXECUTION_SPLIT,
     COL_FIELD_LABOR_COST_NEW,
     COL_FIELD_LABOR_H_NEW,
     COL_FSF_COST_NEW,
@@ -55,7 +56,7 @@ from src.models import EstimationResult
 # Per-line CSV column order (identity -> databook -> applied factors -> updated).
 _LINE_CSV_COLUMNS = [
     COL_PROJECT_ID, COL_ITEM_ID, COL_WBS, COL_DESCRIPTION, COL_QUANTITY,
-    COL_COST_BASIS, COL_COST_UPDATE,
+    COL_COST_BASIS, COL_COST_UPDATE, COL_EXECUTION_SPLIT,
     # databook (original)
     COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
     COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C, COL_DB_BM_C, COL_DB_VSF_C,

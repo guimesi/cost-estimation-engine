@@ -57,10 +57,13 @@ shows all-todo when `current_step` isn't in `STEPS`.
    snapshot). The selected card shows the project's ORIGINAL pricing context
    (`ProjectRef.original_period`, from `COST_UPDATE`; the original location is
    not recorded in ADR). Sets `selected_project_id`.
-2. `step_parameters` - choose Location + Period (any pair with an LRC labor
+2. `step_parameters` - choose which EXECUTION_SPLITs to include (checkboxes +
+   "Select all", shown only when the project has >1 split; lines are filtered
+   before coverage preview and estimation - manual control over Q6-style
+   overlapping splits), then Location + Period (any pair with an LRC labor
    factor; missing material coverage is flagged, see Q7). The caption repeats
-   the original pricing period as the reference point. Runs the engine, stores
-   the `EstimationResult` in `session_state.result`.
+   the original pricing period as the reference point. Runs the engine on the
+   filtered lines, stores the `EstimationResult` in `session_state.result`.
 3. `step_results` - totals + per-category breakdown + grouped bar charts + two
    CSV downloads.
 

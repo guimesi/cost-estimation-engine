@@ -83,6 +83,8 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 #### Q6 - Multiple ADRs/splits per project  ✅ RESOLVED for v1 + ⏳ SME pin (2026-06-19)
 **Resolution:** keep the current logic - sum costs by Snapshot + PlanView_ID and include execution splits ENTIRELY (do not use EXECUTION_SPLIT as an aggregation splitter). The business believes splits are scope partitions like ISBL/OSBL (Inside/Outside Battery Limits). Project 1101168 looks unique and possibly non-compliant (the base vs `USGC Reconfig Studies` scenario found below); it is pinned for review with an SME (Emanuel). No code change: the engine already aggregates all splits.
 
+**Update (2026-07-03):** by business request, step 2 now shows the project's EXECUTION_SPLITs as checkboxes (default all on, with Select all) so the user chooses which splits enter the comparison. Default behavior is unchanged (all splits included); this also gives manual control over overlapping-split cases like 1101168 while the SME review is pending.
+
 **Status:** business answered "need more information." Current behavior is unchanged (aggregate all items at the latest snapshot).
 
 **Diagnostic (2026-06-19, real Snowflake, `scripts/inspect_adr_splits.py`):**

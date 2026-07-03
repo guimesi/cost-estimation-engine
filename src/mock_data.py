@@ -37,6 +37,7 @@ from config.schema import (
     COL_DB_SPEC_H,
     COL_DB_VSF_C,
     COL_DESCRIPTION,
+    COL_EXECUTION_SPLIT,
     COL_ITEM_ID,
     COL_PROJECT_ID,
     COL_PROJECT_NAME,
@@ -103,6 +104,13 @@ _WBS_POOL = ["WBS-100", "WBS-200", "WBS-300", "WBS-400", "WBS-500"]
 # any other mock draw.
 _COST_UPDATE_BY_SNAPSHOT = {1: "2Q2023", 2: "4Q2023"}
 _COST_BASIS_POOL = ["NTA", "TA"]
+# Execution splits (business Q6: scope partitions like ISBL/OSBL). One project
+# gets two splits so the step-2 split selector is exercised in mock mode; the
+# rest have a single split. Derived WITHOUT the RNG (index parity), so it does
+# not shift any other mock draw.
+_MULTI_SPLIT_PROJECT = "PRJ-1003"
+_SPLITS = ["ISBL", "OSBL"]
+_SINGLE_SPLIT = "NA"
 
 
 def _seed(name: str) -> np.random.Generator:
@@ -181,6 +189,11 @@ def _build_adr_master() -> pd.DataFrame:
                         COL_DESCRIPTION: f"Item {i:03d} - {project_name}",
                         COL_COST_BASIS: _COST_BASIS_POOL[i % len(_COST_BASIS_POOL)],
                         COL_COST_UPDATE: _COST_UPDATE_BY_SNAPSHOT[snap],
+                        COL_EXECUTION_SPLIT: (
+                            _SPLITS[i % len(_SPLITS)]
+                            if project_id == _MULTI_SPLIT_PROJECT
+                            else _SINGLE_SPLIT
+                        ),
                         COL_QUANTITY: round(float(rng.uniform(1, 500)), 2),
                         COL_BASE_MATERIAL_MFC: codes[int(rng.integers(0, len(codes)))],
                         COL_VENDOR_SHOP_FAB_MFC: codes[int(rng.integers(0, len(codes)))],
@@ -207,7 +220,7 @@ _ADR_MASTER = _build_adr_master()
 _KEYS = [COL_PROJECT_ID, COL_SNAPSHOT_ID, COL_ITEM_ID]
 _ADR_TABLE_COLUMNS = {
     TBL_ITEM_RECORD: _KEYS + [COL_PROJECT_NAME, COL_WBS, COL_COST_BASIS,
-                              COL_COST_UPDATE],
+                              COL_COST_UPDATE, COL_EXECUTION_SPLIT],
     TBL_DESIGN_DETAILS: [COL_ITEM_ID, COL_SNAPSHOT_ID, COL_DESCRIPTION,
                          COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC],
     TBL_COST_RESULTS: [COL_ITEM_ID, COL_SNAPSHOT_ID,

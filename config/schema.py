@@ -46,6 +46,10 @@ COL_QUANTITY = "QUANTITY"
 # COST_UPDATE; COST_BASIS is carried as per-line detail only.
 COL_COST_BASIS = "COST_BASIS"
 COL_COST_UPDATE = "COST_UPDATE"
+# Execution split the item belongs to (scope partitions like ISBL/OSBL; see
+# business Q6). Users choose which splits to include in the comparison (step 2
+# checkboxes, default all).
+COL_EXECUTION_SPLIT = "EXECUTION_SPLIT"
 
 # Databook (original) hours
 COL_DB_SPEC_H = "DB_SPEC_H"                  # specialty subcontractor hours
@@ -161,6 +165,7 @@ ADR_ITEM_RECORD_RENAME = {
     "ITEM_DESCRIPTION": COL_DESCRIPTION,
     "COST_BASIS": COL_COST_BASIS,
     "COST_UPDATE": COL_COST_UPDATE,
+    "EXECUTION_SPLIT": COL_EXECUTION_SPLIT,
 }
 ADR_COST_RESULTS_RENAME = {
     "ROW_ID": COL_ITEM_ID,

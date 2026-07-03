@@ -66,3 +66,19 @@ def labor_only_selections() -> List[FactorSelection]:
 def labor_selections() -> List[FactorSelection]:
     """Every (Location, Period) with a valid labor factor (offered to the user)."""
     return _labor_selections()
+
+
+@st.cache_data(show_spinner=False)
+def project_splits(project_id: str) -> List[str]:
+    """Distinct EXECUTION_SPLIT labels on a project's latest-snapshot lines.
+
+    Drives the step-2 split checkboxes (business Q6: splits are scope
+    partitions like ISBL/OSBL; the user picks which to include). Reuses the
+    cached line load, so this costs no extra query.
+    """
+    from config.schema import COL_EXECUTION_SPLIT
+
+    lines = load_project_lines(project_id)
+    if COL_EXECUTION_SPLIT not in lines.columns:
+        return []
+    return sorted(lines[COL_EXECUTION_SPLIT].astype(str).unique())

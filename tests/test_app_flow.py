@@ -62,6 +62,29 @@ def test_full_click_flow_to_results():
     assert at.session_state["result"] is None
 
 
+def test_split_selector_filters_estimation():
+    from config.schema import COL_EXECUTION_SPLIT
+
+    # PRJ-1003 is the mock's multi-split project (ISBL / OSBL).
+    at = AppTest.from_file(APP)
+    at.session_state["selected_project_id"] = "PRJ-1003"
+    at.session_state["current_step"] = "parameters"
+    at.run()
+    assert not at.exception
+
+    # Both split checkboxes render (plus the Select all master), default on.
+    keys = {cb.key for cb in at.checkbox}
+    assert {"splits_all_PRJ-1003", "split_PRJ-1003_ISBL", "split_PRJ-1003_OSBL"} <= keys
+
+    # Untick OSBL -> the estimation only includes ISBL lines.
+    at.checkbox(key="split_PRJ-1003_OSBL").uncheck().run()
+    _click(at, "Estimate →")
+    assert not at.exception
+    result = at.session_state["result"]
+    assert result is not None
+    assert set(result.lines[COL_EXECUTION_SPLIT].unique()) == {"ISBL"}
+
+
 def test_results_step_renders_with_seeded_result():
     project = list_projects()[0]
     selection = available_selections()[0]

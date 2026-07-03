@@ -10,6 +10,7 @@ from config.schema import (
     ADR_LINE_NUMERIC_COLUMNS,
     COL_BASE_MATERIAL_MFC,
     COL_DB_FIELD_LABOR_H,
+    COL_EXECUTION_SPLIT,
     COL_PROJECT_ID,
     COL_SNAPSHOT_ID,
     COL_VENDOR_SHOP_FAB_MFC,
@@ -61,6 +62,7 @@ def _raw_item_record() -> pd.DataFrame:
             "ITEM_DESCRIPTION": ["Pipe A", "Pipe A (old)", "Vessel B"],
             "COST_BASIS": ["NTA 4Q23", "NTA 2Q23", "TA"],
             "COST_UPDATE": ["4Q2023", "2Q2023", "2Q2023"],
+            "EXECUTION_SPLIT": ["NA", "NA", None],  # NULL split -> "(not set)"
         }
     )
 
@@ -173,3 +175,7 @@ def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):
     pv1 = repo.load_project_lines("PV1")
     assert (pv1[COL_SNAPSHOT_ID] == "GATE3").all()
     assert len(pv1) == 1  # the SCREEN row was dropped
+
+    # NULL split labels are normalized to a visible, selectable bucket.
+    pv2 = repo.load_project_lines("PV2")
+    assert (pv2[COL_EXECUTION_SPLIT] == "(not set)").all()

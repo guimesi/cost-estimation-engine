@@ -22,6 +22,7 @@ from config.schema import (
     COL_COST_BASIS,
     COL_COST_UPDATE,
     COL_DESCRIPTION,
+    COL_EXECUTION_SPLIT,
     COL_ITEM_ID,
     COL_PROJECT_ID,
     COL_PROJECT_NAME,
@@ -47,7 +48,8 @@ _JOIN_KEYS = [COL_ITEM_ID, COL_SNAPSHOT_ID]
 # databook numeric plus the two material factor codes.
 _DB_NUMERIC_COLS = [c for c in ADR_LINE_NUMERIC_COLUMNS if c != COL_QUANTITY]
 _ITEM_COLS = [COL_ITEM_ID, COL_PROJECT_ID, COL_PROJECT_NAME, COL_SNAPSHOT_ID,
-              COL_WBS, COL_DESCRIPTION, COL_COST_BASIS, COL_COST_UPDATE]
+              COL_WBS, COL_DESCRIPTION, COL_COST_BASIS, COL_COST_UPDATE,
+              COL_EXECUTION_SPLIT]
 _COST_COLS = [COL_ITEM_ID, *_DB_NUMERIC_COLS,
               COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC]
 
@@ -168,7 +170,13 @@ def _sf_load_project_lines(project_id: str) -> pd.DataFrame:
         .merge(qty[[COL_ITEM_ID, COL_QUANTITY]], on=COL_ITEM_ID, how="left")
         .reset_index(drop=True)
     )
-    return _coerce_line_numerics(df)
+    df = _coerce_line_numerics(df)
+    # Split labels drive the step-2 checkboxes; normalize NULLs to a visible
+    # bucket so those rows stay selectable (real data has NULL labels).
+    df[COL_EXECUTION_SPLIT] = (
+        df[COL_EXECUTION_SPLIT].fillna("(not set)").astype(str).str.strip()
+    )
+    return df
 
 
 def _coerce_line_numerics(df: pd.DataFrame) -> pd.DataFrame:

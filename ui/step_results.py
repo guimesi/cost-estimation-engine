@@ -8,6 +8,7 @@ import streamlit as st
 from config.schema import (
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_DESCRIPTION,
+    COL_EXECUTION_SPLIT,
     COL_ITEM_ID,
     COL_QUANTITY,
     COL_TOTAL_COST_NEW,
@@ -35,7 +36,11 @@ def render() -> None:
         return
 
     st.subheader("3. Estimation result")
-    st.caption(f"**{result.project.label}** · {result.selection.label} · {result.n_lines} items")
+    header = f"**{result.project.label}** · {result.selection.label} · {result.n_lines} items"
+    if COL_EXECUTION_SPLIT in result.lines.columns:
+        included = sorted(result.lines[COL_EXECUTION_SPLIT].astype(str).unique())
+        header += f" · splits: {', '.join(included)}"
+    st.caption(header)
     # Doc v2 section 8: the comparison names both contexts. The original's
     # location is not recorded in ADR, so its context is time-only: the
     # COST_UPDATE pricing period (doc v2 says COST_BASIS, but the real data

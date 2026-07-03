@@ -25,6 +25,7 @@ def test_lines_csv_has_rows_and_updated_columns():
     assert "QUANTITY" in csv  # shown for visualization, not used in any formula
     assert "COST_BASIS" in csv   # per-line pricing-basis scenario label
     assert "COST_UPDATE" in csv  # original estimation's pricing period (doc v2)
+    assert "EXECUTION_SPLIT" in csv  # which split each line belongs to (Q6)
 
 
 def test_summary_csv_has_cost_and_hours():
