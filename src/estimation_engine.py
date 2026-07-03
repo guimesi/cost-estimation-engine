@@ -38,7 +38,7 @@ from config.schema import (
     COL_BASE_MATERIAL_FACTOR,
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
-    COL_COST_BASIS,
+    COL_COST_UPDATE,
     COL_DB_BM_C,
     COL_DB_FIELD_LABOR_H,
     COL_DB_FSF_H,
@@ -138,16 +138,19 @@ def _collect_missing_codes(df: pd.DataFrame, factor_by_code: dict) -> set:
     return {str(code) for code in used if code not in factor_by_code}
 
 
-def _original_basis(lines: pd.DataFrame) -> str:
-    """Time period the original databook estimate was priced at (``COST_BASIS``).
+def _original_period(lines: pd.DataFrame) -> str:
+    """Time period the original databook estimate was priced at (``COST_UPDATE``).
 
-    ADR carries one basis per estimate; the most frequent non-blank value wins
-    so a stray blank row can't hide it. ``"n/a"`` when absent - the comparison
-    then shows the original context as unknown rather than failing.
+    Doc v2 points this at ``COST_BASIS``, but the real data disagrees:
+    ``COST_UPDATE`` holds the clean quarterly period ("2Q2019"), constant per
+    project/gate, while ``COST_BASIS`` is a per-line scenario label. The most
+    frequent non-blank value wins so a stray blank row can't hide it. ``"n/a"``
+    when absent - the comparison then shows the original context as unknown
+    rather than failing.
     """
-    if COL_COST_BASIS not in lines.columns:
+    if COL_COST_UPDATE not in lines.columns:
         return "n/a"
-    vals = lines[COL_COST_BASIS].dropna().astype(str).str.strip()
+    vals = lines[COL_COST_UPDATE].dropna().astype(str).str.strip()
     vals = vals[(vals != "") & (vals.str.lower() != "nan")]
     if vals.empty:
         return "n/a"
@@ -189,5 +192,5 @@ def run_estimation(
         total_cost=total_cost,
         total_hours=total_hours,
         warnings=warnings,
-        original_basis=_original_basis(lines),
+        original_period=_original_period(lines),
     )

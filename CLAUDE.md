@@ -171,15 +171,20 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    multiplies by `QUANTITY`. `QUANTITY` is carried for **display only** (shown
    in the step-3 line table and the line-level CSV), not used in any formula.
 6. **The comparison names both estimation contexts** (doc v2, 2026-07-02,
-   section 8): the ORIGINAL side's context is the `COST_BASIS` period from the
-   ADR item record (the original *location* is not recorded in ADR, so it is
-   time-only); the NEW side's context is the user's Location + Period selection.
-   `COL_COST_BASIS` is canonical, carried on the line frame (mock derives it per
-   snapshot without consuming the RNG), summarized into
-   `EstimationResult.original_basis` (mode of non-blank values, else "n/a"), and
-   shown in the step-3 table headers, the summary CSV (`ORIGINAL_BASIS` /
-   `NEW_LOCATION_PERIOD`) and the line-level CSV. Display only - no formula
-   uses it.
+   section 8): the ORIGINAL side's context is its pricing period (the original
+   *location* is not recorded in ADR, so it is time-only); the NEW side's is the
+   user's Location + Period selection. **Doc v2 points the period at
+   `COST_BASIS`, but the real data disagrees** (verified via
+   `scripts/inspect_cost_basis.py`, 2026-07-03 - same doc-vs-data inversion
+   pattern as the EMMA filenames): `COST_UPDATE` holds the clean quarterly
+   period ("2Q2019"), constant per project/gate, while `COST_BASIS` is a
+   free-text pricing-basis/scenario label ("TA"/"NTA", "Fab Yard - China")
+   that varies between items. So `EstimationResult.original_period` summarizes
+   `COL_COST_UPDATE` (mode of non-blank values, else "n/a") and drives the
+   step-3 context caption/headers + the summary CSV (`ORIGINAL_PERIOD` /
+   `NEW_LOCATION_PERIOD`); `COL_COST_BASIS` is carried per line (line-level CSV)
+   only. Both canonical, mock derives them without consuming the RNG. Display
+   only - no formula uses them.
 
 ## Patterns to follow (inherited from data-quality-app)
 

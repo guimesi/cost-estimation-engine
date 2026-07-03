@@ -27,6 +27,7 @@ import pandas as pd
 from config.schema import (
     COL_BASE_MATERIAL_MFC,
     COL_COST_BASIS,
+    COL_COST_UPDATE,
     COL_DB_BM_C,
     COL_DB_FIELD_LABOR_C,
     COL_DB_FIELD_LABOR_H,
@@ -95,10 +96,13 @@ _PROJECTS: List[tuple] = [
 ]
 _SNAPSHOTS = [1, 2]
 _WBS_POOL = ["WBS-100", "WBS-200", "WBS-300", "WBS-400", "WBS-500"]
-# Time period the original databook estimate was priced at (per snapshot; the
-# later snapshot was re-priced more recently). Derived WITHOUT the RNG so adding
-# it does not shift any other mock draw.
-_BASIS_BY_SNAPSHOT = {1: "2Q2023", 2: "4Q2023"}
+# Original-estimate pricing context, mirroring the real ADR semantics
+# (scripts/inspect_cost_basis.py): COST_UPDATE is the quarterly pricing period,
+# constant per snapshot; COST_BASIS is a free-text basis/scenario label that can
+# vary between items. Both derived WITHOUT the RNG so adding them does not shift
+# any other mock draw.
+_COST_UPDATE_BY_SNAPSHOT = {1: "2Q2023", 2: "4Q2023"}
+_COST_BASIS_POOL = ["NTA", "TA"]
 
 
 def _seed(name: str) -> np.random.Generator:
@@ -175,7 +179,8 @@ def _build_adr_master() -> pd.DataFrame:
                         COL_ITEM_ID: item_id,
                         COL_WBS: _WBS_POOL[int(rng.integers(0, len(_WBS_POOL)))],
                         COL_DESCRIPTION: f"Item {i:03d} - {project_name}",
-                        COL_COST_BASIS: _BASIS_BY_SNAPSHOT[snap],
+                        COL_COST_BASIS: _COST_BASIS_POOL[i % len(_COST_BASIS_POOL)],
+                        COL_COST_UPDATE: _COST_UPDATE_BY_SNAPSHOT[snap],
                         COL_QUANTITY: round(float(rng.uniform(1, 500)), 2),
                         COL_BASE_MATERIAL_MFC: codes[int(rng.integers(0, len(codes)))],
                         COL_VENDOR_SHOP_FAB_MFC: codes[int(rng.integers(0, len(codes)))],
@@ -201,7 +206,8 @@ _ADR_MASTER = _build_adr_master()
 # The 4 ADR source tables as projections of the master (shared keys).
 _KEYS = [COL_PROJECT_ID, COL_SNAPSHOT_ID, COL_ITEM_ID]
 _ADR_TABLE_COLUMNS = {
-    TBL_ITEM_RECORD: _KEYS + [COL_PROJECT_NAME, COL_WBS, COL_COST_BASIS],
+    TBL_ITEM_RECORD: _KEYS + [COL_PROJECT_NAME, COL_WBS, COL_COST_BASIS,
+                              COL_COST_UPDATE],
     TBL_DESIGN_DETAILS: [COL_ITEM_ID, COL_SNAPSHOT_ID, COL_DESCRIPTION,
                          COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC],
     TBL_COST_RESULTS: [COL_ITEM_ID, COL_SNAPSHOT_ID,

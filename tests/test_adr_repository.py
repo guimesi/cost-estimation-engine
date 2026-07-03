@@ -57,7 +57,8 @@ def _raw_item_record() -> pd.DataFrame:
             "SNAPSHOT": ["GATE3", "SCREEN", "GATE2"],
             "COMPLETE_WBC": ["313.1", "313.1", "200.0"],
             "ITEM_DESCRIPTION": ["Pipe A", "Pipe A (old)", "Vessel B"],
-            "COST_BASIS": ["4Q2023", "2Q2023", "2Q2023"],
+            "COST_BASIS": ["NTA 4Q23", "NTA 2Q23", "TA"],
+            "COST_UPDATE": ["4Q2023", "2Q2023", "2Q2023"],
         }
     )
 

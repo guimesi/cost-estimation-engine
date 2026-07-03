@@ -19,6 +19,7 @@ from config.schema import (
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
     COL_COST_BASIS,
+    COL_COST_UPDATE,
     COL_DB_BM_C,
     COL_DB_FIELD_LABOR_C,
     COL_DB_FIELD_LABOR_H,
@@ -54,7 +55,7 @@ from src.models import EstimationResult
 # Per-line CSV column order (identity -> databook -> applied factors -> updated).
 _LINE_CSV_COLUMNS = [
     COL_PROJECT_ID, COL_ITEM_ID, COL_WBS, COL_DESCRIPTION, COL_QUANTITY,
-    COL_COST_BASIS,
+    COL_COST_BASIS, COL_COST_UPDATE,
     # databook (original)
     COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
     COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C, COL_DB_BM_C, COL_DB_VSF_C,
@@ -81,8 +82,9 @@ def build_summary_csv(result: EstimationResult) -> str:
     """Return the category-level comparison (cost + hours) as CSV text.
 
     Carries both estimation contexts (doc v2 section 8): the original's
-    COST_BASIS period (its location is not recorded in ADR) and the new
-    estimation's location + period.
+    COST_UPDATE pricing period (its location is not recorded in ADR; doc v2
+    says COST_BASIS but the real data keeps the period in COST_UPDATE) and the
+    new estimation's location + period.
     """
     rows = []
     for cmp in result.cost_categories + [result.total_cost]:
@@ -99,7 +101,7 @@ def _summary_row(measure: str, cmp, result: EstimationResult) -> dict:
     return {
         "MEASURE": measure,
         "CATEGORY": cmp.label,
-        "ORIGINAL_BASIS": result.original_basis,
+        "ORIGINAL_PERIOD": result.original_period,
         "NEW_LOCATION_PERIOD": result.selection.label,
         "ORIGINAL": round(cmp.original, 2),
         "UPDATED": round(cmp.updated, 2),

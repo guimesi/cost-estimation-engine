@@ -37,8 +37,10 @@ def render() -> None:
     st.subheader("3. Estimation result")
     st.caption(f"**{result.project.label}** · {result.selection.label} · {result.n_lines} items")
     # Doc v2 section 8: the comparison names both contexts. The original's
-    # location is not recorded in ADR, so its context is the COST_BASIS period.
-    orig_ctx = f"ADR basis {result.original_basis}"
+    # location is not recorded in ADR, so its context is time-only: the
+    # COST_UPDATE pricing period (doc v2 says COST_BASIS, but the real data
+    # keeps the period in COST_UPDATE; COST_BASIS is a per-line scenario label).
+    orig_ctx = f"priced {result.original_period}"
     new_ctx = result.selection.label
     st.caption(
         f"Comparing **original** ({orig_ctx}; location not recorded in ADR) vs "

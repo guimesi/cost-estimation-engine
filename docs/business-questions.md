@@ -155,6 +155,8 @@ affect the engine (the canonical schema handles them), but worth confirming:
 - 🇧🇷 A tabela de input de *Field Shop Fabrication* rotula os inputs errado (lista `DB_BASE_MATERIAL_COST` / `BASE_MATERIAL_MFC`), mas a fórmula e o engine usam corretamente `DB_FSF_H` com o fator de labor do **LRC**, não MFC.
 - 🇬🇧 In the totals table, Field Labor uses the label `FL_C` for both hours and cost; the engine separates `DB_FIELD_LABOR_H` and `DB_FIELD_LABOR_C`.
 - 🇧🇷 Na tabela de totais, Field Labor usa o rótulo `FL_C` tanto para horas quanto para custo; o engine separa `DB_FIELD_LABOR_H` e `DB_FIELD_LABOR_C`.
+- 🇬🇧 **Doc v2 (section 8) says the original estimation's time period comes from `COST_BASIS`, but the real data disagrees** (checked 2026-07-03 via `scripts/inspect_cost_basis.py`): `COST_UPDATE` holds the quarterly period ("2Q2019"), constant per project/gate, while `COST_BASIS` is a free-text pricing-basis/scenario label ("TA"/"NTA", "Fab Yard - China") that varies between items. The app uses `COST_UPDATE` for the period; worth relaying to Pedro for a doc fix.
+- 🇧🇷 **A doc v2 (seção 8) diz que o período da estimativa original vem do `COST_BASIS`, mas os dados reais discordam** (verificado em 2026-07-03 via `scripts/inspect_cost_basis.py`): o `COST_UPDATE` guarda o período trimestral ("2Q2019"), constante por projeto/gate, enquanto o `COST_BASIS` é um rótulo livre de cenário/base de pricing ("TA"/"NTA", "Fab Yard - China") que varia entre itens. O app usa `COST_UPDATE` para o período; vale repassar ao Pedro para corrigir a doc.
 
 ---
 

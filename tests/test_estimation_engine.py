@@ -132,18 +132,18 @@ def test_run_estimation_builds_comparisons():
     assert result.total_cost.pct_change == pytest.approx((4925 - 3350) / 3350 * 100)
     assert {c.key for c in result.cost_categories} == {"spec", "vsf", "bm", "fsf", "fl"}
     assert {c.key for c in result.hour_categories} == {"spec", "fsf", "fl"}
-    # No COST_BASIS column on the input -> original context unknown.
-    assert result.original_basis == "n/a"
+    # No COST_UPDATE column on the input -> original context unknown.
+    assert result.original_period == "n/a"
 
 
-def test_run_estimation_extracts_original_basis():
-    from config.schema import COL_COST_BASIS
+def test_run_estimation_extracts_original_period():
+    from config.schema import COL_COST_UPDATE
 
     project = ProjectRef("PRJ-1", "Demo", 2, 1)
     lines = _one_line()
-    lines[COL_COST_BASIS] = "2Q2023"
+    lines[COL_COST_UPDATE] = "2Q2019"
     result = run_estimation(project, lines, _mfc(), _lrc(), SELECTION)
-    assert result.original_basis == "2Q2023"
+    assert result.original_period == "2Q2019"
 
 
 def test_pct_change_nan_when_zero_baseline():

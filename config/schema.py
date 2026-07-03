@@ -36,10 +36,16 @@ COL_ITEM_ID = "ITEM_ID"
 COL_WBS = "WBS_CODE"
 COL_DESCRIPTION = "DESCRIPTION"
 COL_QUANTITY = "QUANTITY"
-# Time period the ORIGINAL databook estimate was priced at (doc v2 section 8:
-# the comparison shows it as the original estimation's "time"; the original
-# location is not recorded in ADR).
+# Original-estimate pricing context (doc v2 section 8 wants the original
+# estimation's "time"; the original location is not recorded in ADR). Doc v2
+# points the period at COST_BASIS, but the REAL data disagrees (verified via
+# scripts/inspect_cost_basis.py, 2026-07-03): COST_UPDATE holds the clean
+# quarterly period ("2Q2019"), constant per project/gate, while COST_BASIS is a
+# free-text pricing-basis/scenario label ("TA"/"NTA", "Fab Yard - China", ...)
+# that VARIES between items of one project. So the comparison context uses
+# COST_UPDATE; COST_BASIS is carried as per-line detail only.
 COL_COST_BASIS = "COST_BASIS"
+COL_COST_UPDATE = "COST_UPDATE"
 
 # Databook (original) hours
 COL_DB_SPEC_H = "DB_SPEC_H"                  # specialty subcontractor hours
@@ -154,6 +160,7 @@ ADR_ITEM_RECORD_RENAME = {
     "COMPLETE_WBC": COL_WBS,
     "ITEM_DESCRIPTION": COL_DESCRIPTION,
     "COST_BASIS": COL_COST_BASIS,
+    "COST_UPDATE": COL_COST_UPDATE,
 }
 ADR_COST_RESULTS_RENAME = {
     "ROW_ID": COL_ITEM_ID,
