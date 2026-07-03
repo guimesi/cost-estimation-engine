@@ -61,7 +61,12 @@ def render() -> None:
 
     project = _project_ref(project_id)
     st.subheader("2. Location & Time Period")
-    st.caption(f"Re-estimating **{project.label}** ({project.n_items} items).")
+    st.caption(
+        f"Re-estimating **{project.label}** ({project.n_items} items) · "
+        f"originally priced **{project.original_period}** "
+        "(original location not recorded in ADR). Pick the new location and "
+        "period below."
+    )
 
     selections = labor_selections()
     if not selections:

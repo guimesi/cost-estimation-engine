@@ -22,6 +22,10 @@ class ProjectRef:
     # Stage-gate label from Snowflake (e.g. "GATE3") or an integer in mock mode.
     snapshot_id: Union[int, str]
     n_items: int
+    # When the original estimate was priced (ADR COST_UPDATE, e.g. "2Q2019").
+    # The original WHERE is not recorded in ADR (doc v2 section 8), so the
+    # original context is time-only; "n/a" when the source carries no period.
+    original_period: str = "n/a"
 
     @property
     def label(self) -> str:

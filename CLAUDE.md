@@ -54,10 +54,13 @@ back to the `welcome` landing (so "Restart" returns to step 0). The stepper
 shows all-todo when `current_step` isn't in `STEPS`.
 
 1. `step_project_selection` - pick a project with ADR estimations (latest
-   snapshot). Sets `selected_project_id`.
-2. `step_parameters` - choose Location + Period (only pairs present in BOTH MFC
-   and LRC), runs the engine, stores the `EstimationResult` in
-   `session_state.result`.
+   snapshot). The selected card shows the project's ORIGINAL pricing context
+   (`ProjectRef.original_period`, from `COST_UPDATE`; the original location is
+   not recorded in ADR). Sets `selected_project_id`.
+2. `step_parameters` - choose Location + Period (any pair with an LRC labor
+   factor; missing material coverage is flagged, see Q7). The caption repeats
+   the original pricing period as the reference point. Runs the engine, stores
+   the `EstimationResult` in `session_state.result`.
 3. `step_results` - totals + per-category breakdown + grouped bar charts + two
    CSV downloads.
 
@@ -183,8 +186,10 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    `COL_COST_UPDATE` (mode of non-blank values, else "n/a") and drives the
    step-3 context caption/headers + the summary CSV (`ORIGINAL_PERIOD` /
    `NEW_LOCATION_PERIOD`); `COL_COST_BASIS` is carried per line (line-level CSV)
-   only. Both canonical, mock derives them without consuming the RNG. Display
-   only - no formula uses them.
+   only. `ProjectRef.original_period` surfaces the same period in steps 1-2
+   (Snowflake: `MODE(COST_UPDATE)` inside the `list_projects` aggregation; mock:
+   mode per group). Both canonical, mock derives them without consuming the RNG.
+   Display only - no formula uses them.
 
 ## Patterns to follow (inherited from data-quality-app)
 

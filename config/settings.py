@@ -45,9 +45,6 @@ class Settings:
     sf_schema: str = os.getenv("SNOWFLAKE_SCHEMA", "")
     sf_role: str = os.getenv("SNOWFLAKE_ROLE", "")
 
-    # Limits
-    max_rows_per_table: int = int(os.getenv("MAX_ROWS_PER_TABLE", "50000"))
-
     @property
     def is_mock(self) -> bool:
         return self.data_source == "mock"

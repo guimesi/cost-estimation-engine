@@ -15,7 +15,6 @@ from utils.session.navigation import (
 from utils.session.sidebar import (
     inject_sidebar_css,
     render_progress_sidebar,
-    render_sample_mode_toggle,
     render_sidebar_brand,
     render_sidebar_footer,
 )
@@ -41,6 +40,5 @@ __all__ = [
     "inject_sidebar_css",
     "render_sidebar_brand",
     "render_progress_sidebar",
-    "render_sample_mode_toggle",
     "render_sidebar_footer",
 ]

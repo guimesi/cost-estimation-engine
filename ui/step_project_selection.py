@@ -69,7 +69,11 @@ def _render_dropdown(projects: list[ProjectRef]) -> None:
         f'<div class="cee-card selected"><h4>{chosen.project_name}'
         ' <span class="cee-badge">SELECTED</span></h4>'
         f"<p><code>{chosen.project_id}</code> &nbsp;·&nbsp; {chosen.n_items} items"
-        f" &nbsp;·&nbsp; latest snapshot {chosen.snapshot_id}</p></div>",
+        f" &nbsp;·&nbsp; latest snapshot {chosen.snapshot_id}</p>"
+        # Original estimation context (doc v2): WHEN comes from ADR COST_UPDATE;
+        # the original WHERE is not recorded in ADR.
+        f"<p>Originally priced <b>{chosen.original_period}</b> &nbsp;·&nbsp; "
+        "original location not recorded in ADR</p></div>",
         unsafe_allow_html=True,
     )
 

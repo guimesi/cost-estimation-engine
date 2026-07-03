@@ -19,7 +19,6 @@ from utils.session_state import (
     init_state,
     inject_sidebar_css,
     render_progress_sidebar,
-    render_sample_mode_toggle,
     render_sidebar_brand,
     render_sidebar_footer,
 )
@@ -46,7 +45,6 @@ def main() -> None:
     inject_sidebar_css()
     render_sidebar_brand()
     render_progress_sidebar()
-    render_sample_mode_toggle()
     render_sidebar_footer()
 
     inject_global_css()

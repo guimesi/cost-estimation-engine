@@ -16,8 +16,3 @@ def test_settings_is_frozen():
     s = Settings()
     with pytest.raises(Exception):
         s.data_source = "snowflake"  # type: ignore[misc]
-
-
-def test_max_rows_is_int():
-    assert isinstance(SETTINGS.max_rows_per_table, int)
-    assert SETTINGS.max_rows_per_table > 0

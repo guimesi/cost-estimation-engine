@@ -37,7 +37,6 @@ def init_state() -> None:
         "selected_project_id": None,   # str
         "selection": None,             # src.models.FactorSelection
         "result": None,                # src.models.EstimationResult
-        "sample_mode": True,           # cap rows when fetching from Snowflake
         "scroll_to_top": False,
     }
     for k, v in defaults.items():

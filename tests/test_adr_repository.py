@@ -28,6 +28,8 @@ def test_list_projects_returns_latest_snapshot():
         # Mock data has snapshots {1, 2}; latest must be 2.
         assert p.snapshot_id == 2
         assert p.n_items > 0
+        # Original pricing period rides along (mock snapshot 2 -> 4Q2023).
+        assert p.original_period == "4Q2023"
 
 
 def test_load_project_lines_has_canonical_columns():
@@ -115,8 +117,12 @@ class _FakeClient:
         if "GROUP BY" in sql:  # _sf_list_projects aggregation
             return (
                 item.groupby(["PLANVIEW_ID", "SNAPSHOT"], as_index=False)
-                .agg(FILE_NAME=("FILE_NAME", "max"), N_ITEMS=("ROW_ID", "size"))
-                [["PLANVIEW_ID", "FILE_NAME", "SNAPSHOT", "N_ITEMS"]]
+                .agg(
+                    FILE_NAME=("FILE_NAME", "max"),
+                    N_ITEMS=("ROW_ID", "size"),
+                    ORIGINAL_PERIOD=("COST_UPDATE", lambda s: s.mode().iat[0]),
+                )
+                [["PLANVIEW_ID", "FILE_NAME", "SNAPSHOT", "N_ITEMS", "ORIGINAL_PERIOD"]]
             )
         if "DISTINCT SNAPSHOT" in sql:  # latest-snapshot lookup for one project
             sub = item[item["PLANVIEW_ID"] == params[0]]
@@ -160,6 +166,9 @@ def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):
     assert projects["PV1"].snapshot_id == "GATE3"
     assert projects["PV2"].snapshot_id == "GATE2"
     assert projects["PV1"].n_items == 1  # count at the winning (GATE3) snapshot
+    # Original pricing period from COST_UPDATE at the winning snapshot.
+    assert projects["PV1"].original_period == "4Q2023"
+    assert projects["PV2"].original_period == "2Q2023"
 
     pv1 = repo.load_project_lines("PV1")
     assert (pv1[COL_SNAPSHOT_ID] == "GATE3").all()

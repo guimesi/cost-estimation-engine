@@ -1,4 +1,4 @@
-"""Sidebar: CSS, brand, progress stepper, sample-mode toggle, footer."""
+"""Sidebar: CSS, brand, progress stepper, footer."""
 from __future__ import annotations
 
 import streamlit as st
@@ -44,14 +44,6 @@ def render_progress_sidebar() -> None:
             f'<div class="cee-step {state}">{marker} {i + 1}. {STEP_LABELS[step]}</div>'
         )
     st.sidebar.markdown("".join(html), unsafe_allow_html=True)
-
-
-def render_sample_mode_toggle() -> None:
-    st.session_state.sample_mode = st.sidebar.toggle(
-        "Sample mode (cap rows)",
-        value=st.session_state.get("sample_mode", True),
-        help="On: cap rows per table for fast iteration. Off: fetch the full dataset.",
-    )
 
 
 def render_sidebar_footer() -> None:

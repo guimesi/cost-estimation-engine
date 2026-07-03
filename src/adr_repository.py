@@ -101,9 +101,13 @@ def _sf_list_projects() -> List[ProjectRef]:
 
     client = get_shared_client()
     item_t = client.qualified(TBL_ITEM_RECORD)
+    # MODE(COST_UPDATE): the original pricing period, constant per project/gate
+    # in practice (see scripts/inspect_cost_basis.py); the mode guards against
+    # stray rows.
     agg = client.fetch_query(
         f"SELECT PLANVIEW_ID, MAX(FILE_NAME) AS FILE_NAME, SNAPSHOT, "
-        f"COUNT(*) AS N_ITEMS FROM {item_t} GROUP BY PLANVIEW_ID, SNAPSHOT"
+        f"COUNT(*) AS N_ITEMS, MODE(COST_UPDATE) AS ORIGINAL_PERIOD "
+        f"FROM {item_t} GROUP BY PLANVIEW_ID, SNAPSHOT"
     )
     agg = agg.rename(
         columns={
@@ -221,6 +225,15 @@ def _coerce_snapshot_id(value: object) -> object:
 # =============================================================================
 # ProjectRef builders (latest snapshot per project)
 # =============================================================================
+def _mode_period(values: pd.Series) -> str:
+    """Most frequent non-blank COST_UPDATE value, or "n/a" when there is none."""
+    vals = values.dropna().astype(str).str.strip()
+    vals = vals[(vals != "") & (vals.str.lower() != "nan") & (vals.str.lower() != "none")]
+    if vals.empty:
+        return "n/a"
+    return str(vals.mode().iat[0])
+
+
 def _projects_from_mock_frame(joined: pd.DataFrame) -> List[ProjectRef]:
     """Build refs from the mock per-item latest-snapshot frame (n_items = rows)."""
     out: List[ProjectRef] = []
@@ -231,6 +244,7 @@ def _projects_from_mock_frame(joined: pd.DataFrame) -> List[ProjectRef]:
                 project_name=str(group[COL_PROJECT_NAME].iloc[0]),
                 snapshot_id=_coerce_snapshot_id(group[COL_SNAPSHOT_ID].iloc[0]),
                 n_items=len(group),
+                original_period=_mode_period(group[COL_COST_UPDATE]),
             )
         )
     return sorted(out, key=lambda p: p.project_id)
@@ -252,6 +266,11 @@ def _projects_from_snapshot_counts(agg: pd.DataFrame) -> List[ProjectRef]:
             project_name=str(row[COL_PROJECT_NAME]),
             snapshot_id=_coerce_snapshot_id(row[COL_SNAPSHOT_ID]),
             n_items=int(row["N_ITEMS"]),
+            original_period=(
+                str(row["ORIGINAL_PERIOD"])
+                if "ORIGINAL_PERIOD" in row.index and pd.notna(row["ORIGINAL_PERIOD"])
+                else "n/a"
+            ),
         )
         for _, row in top.iterrows()
     ]
