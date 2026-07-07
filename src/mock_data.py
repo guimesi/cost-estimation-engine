@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 from config.schema import (
+    COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_MFC,
     COL_COST_BASIS,
     COL_COST_UPDATE,
@@ -38,11 +39,18 @@ from config.schema import (
     COL_DB_VSF_C,
     COL_DESCRIPTION,
     COL_EXECUTION_SPLIT,
+    COL_FIELD_LABOR_COST_ORIG,
+    COL_FIELD_LABOR_H_ORIG,
+    COL_FSF_COST_ORIG,
+    COL_FSF_H_ORIG,
     COL_ITEM_ID,
     COL_PROJECT_ID,
     COL_PROJECT_NAME,
     COL_QUANTITY,
     COL_SNAPSHOT_ID,
+    COL_SPEC_COST_ORIG,
+    COL_SPEC_H_ORIG,
+    COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_MFC,
     COL_WBS,
     LRC_FACTOR_MULTIPLIER,
@@ -113,6 +121,21 @@ _SPLITS = ["ISBL", "OSBL"]
 _SINGLE_SPLIT = "NA"
 
 
+# (original engine-input column, databook DB_* reference twin). The mock fills
+# each reference as original * 0.9 - deterministic, no RNG draw (see
+# _build_adr_master).
+_DB_REFERENCE_TWINS = [
+    (COL_SPEC_H_ORIG, COL_DB_SPEC_H),
+    (COL_FSF_H_ORIG, COL_DB_FSF_H),
+    (COL_FIELD_LABOR_H_ORIG, COL_DB_FIELD_LABOR_H),
+    (COL_SPEC_COST_ORIG, COL_DB_SPEC_C),
+    (COL_FSF_COST_ORIG, COL_DB_FSF_C),
+    (COL_FIELD_LABOR_COST_ORIG, COL_DB_FIELD_LABOR_C),
+    (COL_BASE_MATERIAL_COST_ORIG, COL_DB_BM_C),
+    (COL_VENDOR_SHOP_FAB_COST_ORIG, COL_DB_VSF_C),
+]
+
+
 def _seed(name: str) -> np.random.Generator:
     """Fixed, process-stable RNG seeded from ``name`` (``zlib.crc32``)."""
     return np.random.default_rng(zlib.crc32(name.encode("utf-8")))
@@ -179,36 +202,42 @@ def _build_adr_master() -> pd.DataFrame:
                 spec_h = round(float(rng.uniform(0, 120)), 1)
                 fsf_h = round(float(rng.uniform(0, 200)), 1)
                 fl_h = round(float(rng.uniform(10, 260)), 1)
-                rows.append(
-                    {
-                        COL_PROJECT_ID: project_id,
-                        COL_PROJECT_NAME: project_name,
-                        COL_SNAPSHOT_ID: snap,
-                        COL_ITEM_ID: item_id,
-                        COL_WBS: _WBS_POOL[int(rng.integers(0, len(_WBS_POOL)))],
-                        COL_DESCRIPTION: f"Item {i:03d} - {project_name}",
-                        COL_COST_BASIS: _COST_BASIS_POOL[i % len(_COST_BASIS_POOL)],
-                        COL_COST_UPDATE: _COST_UPDATE_BY_SNAPSHOT[snap],
-                        COL_EXECUTION_SPLIT: (
-                            _SPLITS[i % len(_SPLITS)]
-                            if project_id == _MULTI_SPLIT_PROJECT
-                            else _SINGLE_SPLIT
-                        ),
-                        COL_QUANTITY: round(float(rng.uniform(1, 500)), 2),
-                        COL_BASE_MATERIAL_MFC: codes[int(rng.integers(0, len(codes)))],
-                        COL_VENDOR_SHOP_FAB_MFC: codes[int(rng.integers(0, len(codes)))],
-                        # Databook hours
-                        COL_DB_SPEC_H: spec_h,
-                        COL_DB_FSF_H: fsf_h,
-                        COL_DB_FIELD_LABOR_H: fl_h,
-                        # Databook costs
-                        COL_DB_SPEC_C: round(spec_h * float(rng.uniform(40, 90)), 2),
-                        COL_DB_FSF_C: round(fsf_h * float(rng.uniform(40, 90)), 2),
-                        COL_DB_FIELD_LABOR_C: round(fl_h * float(rng.uniform(40, 90)), 2),
-                        COL_DB_BM_C: round(float(rng.uniform(500, 80000)), 2),
-                        COL_DB_VSF_C: round(float(rng.uniform(0, 60000)), 2),
-                    }
-                )
+                row = {
+                    COL_PROJECT_ID: project_id,
+                    COL_PROJECT_NAME: project_name,
+                    COL_SNAPSHOT_ID: snap,
+                    COL_ITEM_ID: item_id,
+                    COL_WBS: _WBS_POOL[int(rng.integers(0, len(_WBS_POOL)))],
+                    COL_DESCRIPTION: f"Item {i:03d} - {project_name}",
+                    COL_COST_BASIS: _COST_BASIS_POOL[i % len(_COST_BASIS_POOL)],
+                    COL_COST_UPDATE: _COST_UPDATE_BY_SNAPSHOT[snap],
+                    COL_EXECUTION_SPLIT: (
+                        _SPLITS[i % len(_SPLITS)]
+                        if project_id == _MULTI_SPLIT_PROJECT
+                        else _SINGLE_SPLIT
+                    ),
+                    COL_QUANTITY: round(float(rng.uniform(1, 500)), 2),
+                    COL_BASE_MATERIAL_MFC: codes[int(rng.integers(0, len(codes)))],
+                    COL_VENDOR_SHOP_FAB_MFC: codes[int(rng.integers(0, len(codes)))],
+                    # Original-estimate hours (engine inputs)
+                    COL_SPEC_H_ORIG: spec_h,
+                    COL_FSF_H_ORIG: fsf_h,
+                    COL_FIELD_LABOR_H_ORIG: fl_h,
+                    # Original-estimate costs (engine inputs)
+                    COL_SPEC_COST_ORIG: round(spec_h * float(rng.uniform(40, 90)), 2),
+                    COL_FSF_COST_ORIG: round(fsf_h * float(rng.uniform(40, 90)), 2),
+                    COL_FIELD_LABOR_COST_ORIG: round(fl_h * float(rng.uniform(40, 90)), 2),
+                    COL_BASE_MATERIAL_COST_ORIG: round(float(rng.uniform(500, 80000)), 2),
+                    COL_VENDOR_SHOP_FAB_COST_ORIG: round(float(rng.uniform(0, 60000)), 2),
+                }
+                # Databook DB_* reference twins (display only, business
+                # 2026-07-07). Derived from the originals WITHOUT the RNG (fixed
+                # 0.9 offset) so no other mock draw shifts, and the reference is
+                # visibly different from the engine input - a wiring mixup
+                # between the two sets shows up in tests.
+                for orig_col, ref_col in _DB_REFERENCE_TWINS:
+                    row[ref_col] = round(row[orig_col] * 0.9, 2)
+                rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -224,6 +253,10 @@ _ADR_TABLE_COLUMNS = {
     TBL_DESIGN_DETAILS: [COL_ITEM_ID, COL_SNAPSHOT_ID, COL_DESCRIPTION,
                          COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC],
     TBL_COST_RESULTS: [COL_ITEM_ID, COL_SNAPSHOT_ID,
+                       COL_SPEC_H_ORIG, COL_FSF_H_ORIG, COL_FIELD_LABOR_H_ORIG,
+                       COL_SPEC_COST_ORIG, COL_FSF_COST_ORIG,
+                       COL_FIELD_LABOR_COST_ORIG,
+                       COL_BASE_MATERIAL_COST_ORIG, COL_VENDOR_SHOP_FAB_COST_ORIG,
                        COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
                        COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C,
                        COL_DB_BM_C, COL_DB_VSF_C],

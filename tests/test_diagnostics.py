@@ -4,9 +4,9 @@ from __future__ import annotations
 import pandas as pd
 
 from config.schema import (
+    COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_MFC,
-    COL_DB_BM_C,
-    COL_DB_VSF_C,
+    COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_MFC,
     MFC_CODE,
     MFC_FACTOR_VALUE,
@@ -25,8 +25,8 @@ def _lines() -> pd.DataFrame:
         {
             COL_BASE_MATERIAL_MFC: ["A", "B"],
             COL_VENDOR_SHOP_FAB_MFC: ["C", "A"],
-            COL_DB_BM_C: [100.0, 200.0],
-            COL_DB_VSF_C: [10.0, 20.0],
+            COL_BASE_MATERIAL_COST_ORIG: [100.0, 200.0],
+            COL_VENDOR_SHOP_FAB_COST_ORIG: [10.0, 20.0],
         }
     )
 
@@ -54,7 +54,7 @@ def test_full_coverage():
 
 
 def test_partial_coverage_sums_only_missing_code_cost():
-    # Drop C: it appears as the vendor code on row 0 (DB_VSF_C = 10).
+    # Drop C: it appears as the vendor code on row 0 (VENDOR_SHOP_FAB_COST_ORIG = 10).
     cov = mfc_coverage(_lines(), _mfc(["A", "B"]), _SEL)
     assert cov.total_codes == 3
     assert cov.matched_codes == 2
@@ -68,6 +68,6 @@ def test_wrong_period_misses_everything():
     cov = mfc_coverage(_lines(), _mfc(["A", "B", "C"]), other)
     assert cov.matched_codes == 0
     assert cov.missing_codes == ["A", "B", "C"]
-    # All base + vendor databook cost is left unchanged.
+    # All base + vendor original material cost is left unchanged.
     assert cov.unmatched_material_cost == 330.0
     assert cov.unmatched_cost_pct == 100.0

@@ -10,7 +10,12 @@ Snowflake / Excel column names to these canonical names lives in
 schema reconciliation is a one-file edit.
 
 Naming convention (uppercase, Snowflake style):
-- ``DB_*``  -> databook baseline values from ADR (the "original" estimate).
+- ``*_ORIG`` -> original-estimate values from ADR (the engine's inputs and the
+  "Original" side of every comparison). In the real cost table these are the
+  columns WITHOUT the ``DB_`` prefix (``SPEC_S_C_COST`` etc.) - business
+  correction, 2026-07-07.
+- ``DB_*``  -> databook REFERENCE values from ADR. Display only (line table +
+  line-level CSV); no formula reads them.
 - ``*_NEW`` -> values recomputed by the engine (the "updated" estimate).
 """
 from __future__ import annotations
@@ -51,24 +56,41 @@ COL_COST_UPDATE = "COST_UPDATE"
 # checkboxes, default all).
 COL_EXECUTION_SPLIT = "EXECUTION_SPLIT"
 
-# Databook (original) hours
-COL_DB_SPEC_H = "DB_SPEC_H"                  # specialty subcontractor hours
-COL_DB_FSF_H = "DB_FSF_H"                    # field shop fabrication hours
-COL_DB_FIELD_LABOR_H = "DB_FIELD_LABOR_H"    # field labor hours (pass-through)
+# Original-estimate hours (engine inputs; raw columns WITHOUT the DB_ prefix)
+COL_SPEC_H_ORIG = "SPEC_H_ORIG"                          # specialty subcontractor hours
+COL_FSF_H_ORIG = "FSF_H_ORIG"                            # field shop fabrication hours
+COL_FIELD_LABOR_H_ORIG = "FIELD_LABOR_H_ORIG"            # field labor hours
 
-# Databook (original) costs
-COL_DB_SPEC_C = "DB_SPEC_C"                  # specialty subcontractor cost
-COL_DB_FSF_C = "DB_FSF_C"                    # field shop fabrication cost
-COL_DB_FIELD_LABOR_C = "DB_FIELD_LABOR_C"    # field labor cost (pass-through)
-COL_DB_BM_C = "DB_BM_C"                      # base material cost
-COL_DB_VSF_C = "DB_VSF_C"                    # vendor shop fabrication cost
+# Original-estimate costs (engine inputs; raw columns WITHOUT the DB_ prefix)
+COL_SPEC_COST_ORIG = "SPEC_COST_ORIG"                    # specialty subcontractor cost
+COL_FSF_COST_ORIG = "FSF_COST_ORIG"                      # field shop fabrication cost
+COL_FIELD_LABOR_COST_ORIG = "FIELD_LABOR_COST_ORIG"      # field labor cost
+COL_BASE_MATERIAL_COST_ORIG = "BASE_MATERIAL_COST_ORIG"  # base material cost
+COL_VENDOR_SHOP_FAB_COST_ORIG = "VENDOR_SHOP_FAB_COST_ORIG"
+
+# Databook REFERENCE values (raw DB_* columns). Business correction 2026-07-07:
+# the DB_ prefixed columns are reference only - the engine never reads them;
+# they are carried for display (line table + line-level CSV) alongside the
+# *_ORIG columns that actually feed the calculation.
+COL_DB_SPEC_H = "DB_SPEC_H"                  # databook specialty subcontractor hours
+COL_DB_FSF_H = "DB_FSF_H"                    # databook field shop fabrication hours
+COL_DB_FIELD_LABOR_H = "DB_FIELD_LABOR_H"    # databook field labor hours
+COL_DB_SPEC_C = "DB_SPEC_C"                  # databook specialty subcontractor cost
+COL_DB_FSF_C = "DB_FSF_C"                    # databook field shop fabrication cost
+COL_DB_FIELD_LABOR_C = "DB_FIELD_LABOR_C"    # databook field labor cost
+COL_DB_BM_C = "DB_BM_C"                      # databook base material cost
+COL_DB_VSF_C = "DB_VSF_C"                    # databook vendor shop fabrication cost
 
 # Material factor codes carried on each line (matched against MFC_CODE)
 COL_BASE_MATERIAL_MFC = "BASE_MATERIAL_MFC"
 COL_VENDOR_SHOP_FAB_MFC = "VENDOR_SHOP_FAB_MFC"
 
-# All databook input columns expected on the canonical line frame.
+# All numeric input columns expected on the canonical line frame (engine inputs
+# first, then the display-only databook reference block).
 ADR_LINE_NUMERIC_COLUMNS = (
+    COL_SPEC_H_ORIG, COL_FSF_H_ORIG, COL_FIELD_LABOR_H_ORIG,
+    COL_SPEC_COST_ORIG, COL_FSF_COST_ORIG, COL_FIELD_LABOR_COST_ORIG,
+    COL_BASE_MATERIAL_COST_ORIG, COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
     COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C,
     COL_DB_BM_C, COL_DB_VSF_C,
@@ -154,8 +176,12 @@ LRC_RAW_RENAME = {
 #   (planview + gate + split + ADR number) - too coarse for an item join.
 # - ``ADR_DIM_ESTIMATEDESIGNDETAILS`` is an EAV table (one row per design
 #   parameter) and contributes no column the engine needs, so it is NOT joined.
-# - Several DB_* values arrive as strings ("0", "9.47"); the repository coerces
-#   ADR_LINE_NUMERIC_COLUMNS to numeric after the rename.
+# - Several databook values arrive as strings ("0", "9.47"); the repository
+#   coerces ADR_LINE_NUMERIC_COLUMNS to numeric after the rename.
+# - Business correction (2026-07-07): the real original hours/costs are the
+#   columns WITHOUT the DB_ prefix (SPEC_S_C, SPEC_S_C_COST, ...); the DB_*
+#   twins are databook reference values, kept for display only. Both sets are
+#   read; only the un-prefixed set feeds the engine.
 ADR_ITEM_RECORD_RENAME = {
     "ROW_ID": COL_ITEM_ID,
     "PLANVIEW_ID": COL_PROJECT_ID,
@@ -169,6 +195,16 @@ ADR_ITEM_RECORD_RENAME = {
 }
 ADR_COST_RESULTS_RENAME = {
     "ROW_ID": COL_ITEM_ID,
+    # Original estimate (engine inputs) - the un-prefixed columns:
+    "SPEC_S_C": COL_SPEC_H_ORIG,                # specialty subcontractor HOURS
+    "SPEC_S_C_COST": COL_SPEC_COST_ORIG,        # specialty subcontractor cost
+    "FIELD_SHOP_FAB": COL_FSF_H_ORIG,           # field shop fab HOURS
+    "FIELD_SHOP_FAB_COST": COL_FSF_COST_ORIG,   # field shop fab cost
+    "FIELD_LABOR": COL_FIELD_LABOR_H_ORIG,      # field labor HOURS
+    "FIELD_LABOR_COST": COL_FIELD_LABOR_COST_ORIG,
+    "BASE_MATERIAL_COST": COL_BASE_MATERIAL_COST_ORIG,
+    "VENDOR_SHOP_FAB_COST": COL_VENDOR_SHOP_FAB_COST_ORIG,
+    # Databook reference (display only):
     "DB_SPEC_S_C": COL_DB_SPEC_H,            # databook specialty subcontractor HOURS
     "DB_SPEC_S_C_COST": COL_DB_SPEC_C,       # databook specialty subcontractor cost
     "DB_FIELD_SHOP_FAB": COL_DB_FSF_H,       # databook field shop fab HOURS
@@ -202,21 +238,24 @@ SNAPSHOT_PRIORITY = {
 # =============================================================================
 # Category definitions (drive the engine, the comparison, and the CSV)
 # =============================================================================
-# A cost category pairs the databook (original) column with the engine's
-# recomputed (updated) column. Order matches the doc's breakdown.
+# A cost category pairs the original-estimate column (*_ORIG, engine input)
+# with the engine's recomputed (updated) column. Order matches the doc's
+# breakdown. The DB_* databook reference columns deliberately do NOT appear
+# here - they are display-only.
 CostCategory = namedtuple("CostCategory", "key label orig_col new_col")
 HourCategory = namedtuple("HourCategory", "key label orig_col new_col")
 
 COST_CATEGORIES = (
-    CostCategory("spec", "Specialty Subcontractor", COL_DB_SPEC_C, COL_SPEC_COST_NEW),
-    CostCategory("vsf", "Vendor Shop Fabrication", COL_DB_VSF_C, COL_VENDOR_SHOP_FAB_COST_NEW),
-    CostCategory("bm", "Base Material", COL_DB_BM_C, COL_BASE_MATERIAL_COST_NEW),
-    CostCategory("fsf", "Field Shop Fabrication", COL_DB_FSF_C, COL_FSF_COST_NEW),
-    CostCategory("fl", "Field Labor", COL_DB_FIELD_LABOR_C, COL_FIELD_LABOR_COST_NEW),
+    CostCategory("spec", "Specialty Subcontractor", COL_SPEC_COST_ORIG, COL_SPEC_COST_NEW),
+    CostCategory("vsf", "Vendor Shop Fabrication", COL_VENDOR_SHOP_FAB_COST_ORIG,
+                 COL_VENDOR_SHOP_FAB_COST_NEW),
+    CostCategory("bm", "Base Material", COL_BASE_MATERIAL_COST_ORIG, COL_BASE_MATERIAL_COST_NEW),
+    CostCategory("fsf", "Field Shop Fabrication", COL_FSF_COST_ORIG, COL_FSF_COST_NEW),
+    CostCategory("fl", "Field Labor", COL_FIELD_LABOR_COST_ORIG, COL_FIELD_LABOR_COST_NEW),
 )
 
 HOUR_CATEGORIES = (
-    HourCategory("spec", "Specialty Subcontractor", COL_DB_SPEC_H, COL_SPEC_H_NEW),
-    HourCategory("fsf", "Field Shop Fabrication", COL_DB_FSF_H, COL_FSF_H_NEW),
-    HourCategory("fl", "Field Labor", COL_DB_FIELD_LABOR_H, COL_FIELD_LABOR_H_NEW),
+    HourCategory("spec", "Specialty Subcontractor", COL_SPEC_H_ORIG, COL_SPEC_H_NEW),
+    HourCategory("fsf", "Field Shop Fabrication", COL_FSF_H_ORIG, COL_FSF_H_NEW),
+    HourCategory("fl", "Field Labor", COL_FIELD_LABOR_H_ORIG, COL_FIELD_LABOR_H_NEW),
 )

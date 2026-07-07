@@ -1,9 +1,9 @@
 """CSV builders for the estimation result.
 
 Two outputs:
-- :func:`build_lines_csv` - the full per-line frame (databook originals +
-  applied factors + updated values), the detailed project estimation file the
-  doc's flow step (d) delivers.
+- :func:`build_lines_csv` - the full per-line frame (original values + DB_*
+  databook reference + applied factors + updated values), the detailed project
+  estimation file the doc's flow step (d) delivers.
 - :func:`build_summary_csv` - the category-level original/updated/delta/%
   comparison shown on the dashboard.
 """
@@ -15,6 +15,7 @@ import pandas as pd
 
 from config.schema import (
     COL_BASE_MATERIAL_COST_NEW,
+    COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_FACTOR,
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
@@ -31,21 +32,28 @@ from config.schema import (
     COL_DESCRIPTION,
     COL_EXECUTION_SPLIT,
     COL_FIELD_LABOR_COST_NEW,
+    COL_FIELD_LABOR_COST_ORIG,
     COL_FIELD_LABOR_H_NEW,
+    COL_FIELD_LABOR_H_ORIG,
     COL_FSF_COST_NEW,
+    COL_FSF_COST_ORIG,
     COL_FSF_H_NEW,
+    COL_FSF_H_ORIG,
     COL_ITEM_ID,
     COL_LRC_FACTOR,
     COL_LRC_USD_RATE,
     COL_PROJECT_ID,
     COL_QUANTITY,
     COL_SPEC_COST_NEW,
+    COL_SPEC_COST_ORIG,
     COL_SPEC_H_NEW,
+    COL_SPEC_H_ORIG,
     COL_TOTAL_COST_NEW,
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
     COL_VENDOR_SHOP_FAB_COST_NEW,
+    COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_FACTOR,
     COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_VENDOR_SHOP_FAB_MFC,
@@ -53,11 +61,16 @@ from config.schema import (
 )
 from src.models import EstimationResult
 
-# Per-line CSV column order (identity -> databook -> applied factors -> updated).
+# Per-line CSV column order
+# (identity -> original -> databook reference -> applied factors -> updated).
 _LINE_CSV_COLUMNS = [
     COL_PROJECT_ID, COL_ITEM_ID, COL_WBS, COL_DESCRIPTION, COL_QUANTITY,
     COL_COST_BASIS, COL_COST_UPDATE, COL_EXECUTION_SPLIT,
-    # databook (original)
+    # original estimate (engine inputs)
+    COL_SPEC_H_ORIG, COL_FSF_H_ORIG, COL_FIELD_LABOR_H_ORIG,
+    COL_SPEC_COST_ORIG, COL_FSF_COST_ORIG, COL_FIELD_LABOR_COST_ORIG,
+    COL_BASE_MATERIAL_COST_ORIG, COL_VENDOR_SHOP_FAB_COST_ORIG,
+    # databook DB_* reference (display only; not used by any formula)
     COL_DB_SPEC_H, COL_DB_FSF_H, COL_DB_FIELD_LABOR_H,
     COL_DB_SPEC_C, COL_DB_FSF_C, COL_DB_FIELD_LABOR_C, COL_DB_BM_C, COL_DB_VSF_C,
     # applied factors (+ missing-MFC flags)

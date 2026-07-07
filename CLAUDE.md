@@ -106,27 +106,31 @@ tests/                         # pytest + ruff, ~95% coverage
 
 ## Calculation rules (the core contract)
 
-Implemented in `src/estimation_engine.py::estimate_lines`, vectorized:
+Implemented in `src/estimation_engine.py::estimate_lines`, vectorized. Inputs
+are the canonical `*_ORIG` columns - the REAL original hours/costs, which in
+the live cost table are the columns WITHOUT the `DB_` prefix; the `DB_*` twins
+are databook reference, display-only (business Q11, 2026-07-07 - assumption 7):
 
 ```
 # Labor (LRC factor F + USD rate USD_R for the selected location/period,
 # applied to ALL THREE labor categories):
-SPEC_H_NEW        = DB_SPEC_H        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
-FSF_H_NEW         = DB_FSF_H         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
-FIELD_LABOR_H_NEW = DB_FIELD_LABOR_H * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
+SPEC_H_NEW        = SPEC_H_ORIG        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
+FSF_H_NEW         = FSF_H_ORIG         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
+FIELD_LABOR_H_NEW = FIELD_LABOR_H_ORIG * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
 # Material (MFC factor matched per line code, location, period):
-BASE_MATERIAL_COST_NEW   = DB_BM_C  * F_mfc[BASE_MATERIAL_MFC]
-VENDOR_SHOP_FAB_COST_NEW = DB_VSF_C * F_mfc[VENDOR_SHOP_FAB_MFC]
+BASE_MATERIAL_COST_NEW   = BASE_MATERIAL_COST_ORIG   * F_mfc[BASE_MATERIAL_MFC]
+VENDOR_SHOP_FAB_COST_NEW = VENDOR_SHOP_FAB_COST_ORIG * F_mfc[VENDOR_SHOP_FAB_MFC]
 # Totals:
 TOTAL_HOURS_NEW = SPEC_H_NEW + FSF_H_NEW + FIELD_LABOR_H_NEW
 TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
+# The "Original" side of every comparison sums the same *_ORIG columns.
 ```
 
 ### Assumptions log (where the doc was ambiguous - confirmed with the user)
 
 1. **Field Labor IS re-estimated** (business Q1 answer, 2026-06-19: the spec
    gained a Field Labor Calculation). It uses the same LRC factor F + USD rate
-   as the other labor categories: `FIELD_LABOR_H_NEW = DB_FIELD_LABOR_H * F`,
+   as the other labor categories: `FIELD_LABOR_H_NEW = FIELD_LABOR_H_ORIG * F`,
    `FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R`. (Previously a pass-through
    while the spec was silent; it now varies with location/period like the rest.)
 2. **One LRC factor + USD rate per (location, period) applies to ALL THREE labor
@@ -172,10 +176,12 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    pipeline, not this engine.) **Missing LRC** for the selection raises
    `LookupError` (a guard - the UI only offers selections present in both
    references).
-5. **Databook `DB_*` values are quantity-inclusive line totals** (business Q4,
-   2026-06-19): factors are applied directly to them and the engine never
-   multiplies by `QUANTITY`. `QUANTITY` is carried for **display only** (shown
-   in the step-3 line table and the line-level CSV), not used in any formula.
+5. **Original values are quantity-inclusive line totals** (business Q4,
+   2026-06-19, answered for `DB_*`; assumed to hold for the un-prefixed
+   originals too - open follow-up in docs/business-questions.md): factors are
+   applied directly to them and the engine never multiplies by `QUANTITY`.
+   `QUANTITY` is carried for **display only** (shown in the step-3 line table
+   and the line-level CSV), not used in any formula.
 6. **The comparison names both estimation contexts** (doc v2, 2026-07-02,
    section 8): the ORIGINAL side's context is its pricing period (the original
    *location* is not recorded in ADR, so it is time-only); the NEW side's is the
@@ -193,6 +199,19 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    (Snowflake: `MODE(COST_UPDATE)` inside the `list_projects` aggregation; mock:
    mode per group). Both canonical, mock derives them without consuming the RNG.
    Display only - no formula uses them.
+7. **`DB_*` columns are databook REFERENCE, not the engine's inputs** (business
+   Q11, 2026-07-07 - another doc-vs-data inversion; the spec doc writes its
+   formulas with `DB_*` names). The REAL original hours/costs are the cost-table
+   columns WITHOUT the `DB_` prefix (`SPEC_S_C`, `SPEC_S_C_COST`,
+   `FIELD_SHOP_FAB`, `FIELD_SHOP_FAB_COST`, `FIELD_LABOR`, `FIELD_LABOR_COST`,
+   `BASE_MATERIAL_COST`, `VENDOR_SHOP_FAB_COST`) -> canonical `*_ORIG`, which
+   feed every formula and the "Original" side of all comparisons. The `DB_*`
+   twins are still read and carried (line-level CSV) as reference, but no
+   formula touches them. Mock fills each `DB_*` as `*_ORIG * 0.9` (no RNG draw)
+   so a wiring mixup between the sets breaks tests. NOTE: the un-prefixed raw
+   names were supplied by the business, not yet re-verified against the live
+   schema (re-run `scripts/inspect_adr_schema.py` when credentials are at hand;
+   `_require_columns` fails loudly if a name is off).
 
 ## Patterns to follow (inherited from data-quality-app)
 

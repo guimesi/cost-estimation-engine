@@ -10,9 +10,11 @@ from config.schema import (
     ADR_LINE_NUMERIC_COLUMNS,
     COL_BASE_MATERIAL_MFC,
     COL_DB_FIELD_LABOR_H,
+    COL_DB_SPEC_H,
     COL_EXECUTION_SPLIT,
     COL_PROJECT_ID,
     COL_SNAPSHOT_ID,
+    COL_SPEC_H_ORIG,
     COL_VENDOR_SHOP_FAB_MFC,
     TBL_COST_RESULTS,
     TBL_ITEM_RECORD,
@@ -68,10 +70,21 @@ def _raw_item_record() -> pd.DataFrame:
 
 
 def _raw_cost_results() -> pd.DataFrame:
-    # Databook hours arrive as strings, like the real export.
+    # Hours arrive as strings, like the real export. The un-prefixed columns
+    # are the REAL originals (engine inputs); the DB_* twins are databook
+    # reference values with deliberately different numbers, so a mixup between
+    # the two sets is caught below.
     return pd.DataFrame(
         {
             "ROW_ID": ["PV1_GATE3_1", "PV1_SCREEN_1", "PV2_GATE2_1"],
+            "SPEC_S_C": ["12.5", "6", "0"],
+            "SPEC_S_C_COST": [120.0, 60.0, 0.0],
+            "FIELD_SHOP_FAB": ["0", "0", "3"],
+            "FIELD_SHOP_FAB_COST": [0.0, 0.0, 30.0],
+            "FIELD_LABOR": ["9.47", "4", "2"],
+            "FIELD_LABOR_COST": [9.47, 4.0, 2.0],
+            "BASE_MATERIAL_COST": [0.55, 0.3, 6.0],
+            "VENDOR_SHOP_FAB_COST": [350.0, 120.0, 0.0],
             "DB_SPEC_S_C": ["10", "5", "0"],
             "DB_SPEC_S_C_COST": [100.0, 50.0, 0.0],
             "DB_FIELD_SHOP_FAB": ["0", "0", "2"],
@@ -158,8 +171,13 @@ def test_snowflake_reconciles_canonical_columns(_snowflake):
     lines = repo.load_project_lines("PV1")
     for col in (*ADR_LINE_NUMERIC_COLUMNS, COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC):
         assert col in lines.columns
-    # String databook hours were coerced to numeric.
+    # String hours were coerced to numeric (both sets).
+    assert lines[COL_SPEC_H_ORIG].dtype.kind == "f"
     assert lines[COL_DB_FIELD_LABOR_H].dtype.kind == "f"
+    # The engine input comes from the un-prefixed raw column (SPEC_S_C = 12.5),
+    # NOT its DB_* databook reference twin (DB_SPEC_S_C = 10).
+    assert lines[COL_SPEC_H_ORIG].iloc[0] == 12.5
+    assert lines[COL_DB_SPEC_H].iloc[0] == 10.0
 
 
 def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):

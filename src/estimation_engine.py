@@ -1,21 +1,26 @@
-"""The estimation engine: re-estimate ADR databook lines with EMMA factors.
+"""The estimation engine: re-estimate ADR original lines with EMMA factors.
 
 Given a project's canonical line frame plus the user's (Location, Period)
 selection, this recomputes every cost/hour category and the totals, then
 assembles an :class:`EstimationResult` with original-vs-updated comparisons.
 
-Calculation rules (from the business doc, with the two confirmed readings):
+The inputs are the ``*_ORIG`` columns - the real original hours/costs, which
+in the ADR cost table are the columns WITHOUT the ``DB_`` prefix (business
+correction, 2026-07-07). The ``DB_*`` databook columns are reference values
+carried for display only; no formula reads them.
+
+Calculation rules (from the business doc, with the confirmed readings):
 
 Labor (LRC factor ``F`` + USD rate ``USD_R`` for the selected location/period,
 applied to ALL THREE labor categories - Specialty Subcontractor, Field Shop
 Fabrication and Field Labor):
-    SPEC_H_NEW         = DB_SPEC_H        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
-    FSF_H_NEW          = DB_FSF_H         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
-    FIELD_LABOR_H_NEW  = DB_FIELD_LABOR_H * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
+    SPEC_H_NEW         = SPEC_H_ORIG        * F   SPEC_COST_NEW        = SPEC_H_NEW        * USD_R
+    FSF_H_NEW          = FSF_H_ORIG         * F   FSF_COST_NEW         = FSF_H_NEW         * USD_R
+    FIELD_LABOR_H_NEW  = FIELD_LABOR_H_ORIG * F   FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW * USD_R
 
 Material (MFC factor matched per line code, location, period):
-    BASE_MATERIAL_COST_NEW    = DB_BM_C  * F_mfc[BASE_MATERIAL_MFC]
-    VENDOR_SHOP_FAB_COST_NEW  = DB_VSF_C * F_mfc[VENDOR_SHOP_FAB_MFC]
+    BASE_MATERIAL_COST_NEW    = BASE_MATERIAL_COST_ORIG   * F_mfc[BASE_MATERIAL_MFC]
+    VENDOR_SHOP_FAB_COST_NEW  = VENDOR_SHOP_FAB_COST_ORIG * F_mfc[VENDOR_SHOP_FAB_MFC]
 
 Totals:
     TOTAL_HOURS_NEW = SPEC_H_NEW + FSF_H_NEW + FIELD_LABOR_H_NEW
@@ -35,28 +40,28 @@ import pandas as pd
 
 from config.schema import (
     COL_BASE_MATERIAL_COST_NEW,
+    COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_FACTOR,
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
     COL_COST_UPDATE,
-    COL_DB_BM_C,
-    COL_DB_FIELD_LABOR_H,
-    COL_DB_FSF_H,
-    COL_DB_SPEC_H,
-    COL_DB_VSF_C,
     COL_FIELD_LABOR_COST_NEW,
     COL_FIELD_LABOR_H_NEW,
+    COL_FIELD_LABOR_H_ORIG,
     COL_FSF_COST_NEW,
     COL_FSF_H_NEW,
+    COL_FSF_H_ORIG,
     COL_LRC_FACTOR,
     COL_LRC_USD_RATE,
     COL_SPEC_COST_NEW,
     COL_SPEC_H_NEW,
+    COL_SPEC_H_ORIG,
     COL_TOTAL_COST_NEW,
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
     COL_VENDOR_SHOP_FAB_COST_NEW,
+    COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_FACTOR,
     COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_VENDOR_SHOP_FAB_MFC,
@@ -91,11 +96,11 @@ def estimate_lines(
     # All three labor categories use the same LRC multiplier F and USD rate.
     df[COL_LRC_FACTOR] = f_lrc
     df[COL_LRC_USD_RATE] = usd_rate
-    df[COL_SPEC_H_NEW] = df[COL_DB_SPEC_H] * f_lrc
+    df[COL_SPEC_H_NEW] = df[COL_SPEC_H_ORIG] * f_lrc
     df[COL_SPEC_COST_NEW] = df[COL_SPEC_H_NEW] * usd_rate
-    df[COL_FSF_H_NEW] = df[COL_DB_FSF_H] * f_lrc
+    df[COL_FSF_H_NEW] = df[COL_FSF_H_ORIG] * f_lrc
     df[COL_FSF_COST_NEW] = df[COL_FSF_H_NEW] * usd_rate
-    df[COL_FIELD_LABOR_H_NEW] = df[COL_DB_FIELD_LABOR_H] * f_lrc
+    df[COL_FIELD_LABOR_H_NEW] = df[COL_FIELD_LABOR_H_ORIG] * f_lrc
     df[COL_FIELD_LABOR_COST_NEW] = df[COL_FIELD_LABOR_H_NEW] * usd_rate
 
     # --- Material: Base Material + Vendor Shop Fabrication (MFC per code) ---
@@ -120,8 +125,12 @@ def estimate_lines(
     df[COL_BASE_MATERIAL_FACTOR] = df[COL_BASE_MATERIAL_FACTOR].fillna(1.0)
     df[COL_VENDOR_SHOP_FAB_FACTOR] = df[COL_VENDOR_SHOP_FAB_FACTOR].fillna(1.0)
 
-    df[COL_BASE_MATERIAL_COST_NEW] = df[COL_DB_BM_C] * df[COL_BASE_MATERIAL_FACTOR]
-    df[COL_VENDOR_SHOP_FAB_COST_NEW] = df[COL_DB_VSF_C] * df[COL_VENDOR_SHOP_FAB_FACTOR]
+    df[COL_BASE_MATERIAL_COST_NEW] = (
+        df[COL_BASE_MATERIAL_COST_ORIG] * df[COL_BASE_MATERIAL_FACTOR]
+    )
+    df[COL_VENDOR_SHOP_FAB_COST_NEW] = (
+        df[COL_VENDOR_SHOP_FAB_COST_ORIG] * df[COL_VENDOR_SHOP_FAB_FACTOR]
+    )
 
     # --- Totals (per line) ---
     df[COL_TOTAL_HOURS_ORIG] = sum(df[c.orig_col] for c in HOUR_CATEGORIES)

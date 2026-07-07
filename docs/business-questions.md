@@ -19,6 +19,7 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 2. ✅ **Single LRC factor** - 🇬🇧 CONFIRMED. One LRC factor + USD rate per (location, period) applies to every labor calculation; no labor-type breakdown. · 🇧🇷 CONFIRMADO. Um fator LRC + taxa USD por (location, period) vale para todo cálculo de labor; sem distinção por tipo.
 3. ✏️ **Missing MFC factor** - 🇬🇧 Keep unchanged (factor 1.0) + flag it; added a per-line missing-MFC flag (CSV + results). DQ rule = separate follow-up. · 🇧🇷 Manter inalterado (fator 1.0) + sinalizar; adicionado flag por linha (CSV + resultados). Regra de DQ = follow-up separado. **Done.**
 4. ✏️ **QUANTITY** - 🇬🇧 `DB_*` are already quantity-inclusive totals (no extra multiply); QUANTITY is display-only, now shown in the step-3 table + CSV. · 🇧🇷 `DB_*` já são totais com quantidade (sem multiplicar de novo); QUANTITY é só visualização, agora na tabela do step 3 + CSV. **Done.**
+11. ✏️ **DB_* vs un-prefixed cost columns** - 🇬🇧 The REAL original hours/costs are the columns WITHOUT the `DB_` prefix (`SPEC_S_C`, `SPEC_S_C_COST`, ...); `DB_*` are databook reference only, kept for display. Engine rewired. · 🇧🇷 As horas/custos originais REAIS são as colunas SEM o prefixo `DB_` (`SPEC_S_C`, `SPEC_S_C_COST`, ...); as `DB_*` são só referência do databook, mantidas para exibição. Engine reapontado. **Done.**
 
 **B. Scope & data / Escopo e dados**
 
@@ -69,6 +70,14 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 
 - 🇬🇧 Our formulas apply factors directly to the databook costs/hours and don't use QUANTITY. Are the `DB_*` values already line totals (quantity-inclusive)? If they're per-unit, should the engine multiply by QUANTITY anywhere?
 - 🇧🇷 Nossas fórmulas aplicam os fatores diretamente sobre os custos/horas do databook e não usam QUANTITY. Os valores `DB_*` já são totais por linha (já incluem a quantidade)? Se forem por unidade, o engine deveria multiplicar por QUANTITY em algum ponto?
+
+#### Q11 - DB_* vs un-prefixed cost columns  ✏️ RESOLVED (2026-07-07)
+**Resolution:** the business corrected the engine's input columns: in `ADR_FACT_ESTIMATECOSTRESULTS`, the REAL original hours/costs are the columns **without** the `DB_` prefix (`SPEC_S_C`, `SPEC_S_C_COST`, `FIELD_SHOP_FAB`, `FIELD_SHOP_FAB_COST`, `FIELD_LABOR`, `FIELD_LABOR_COST`, `BASE_MATERIAL_COST`, `VENDOR_SHOP_FAB_COST`) - hours included. The `DB_*` twins are databook **reference** values: keep reading and showing them (line-level CSV + reference), but no formula uses them. Implemented: new canonical `*_ORIG` columns feed the engine and the "Original" side of every comparison; `DB_*` are carried as display-only reference. (Same doc-vs-data inversion family as the EMMA filenames and COST_BASIS/COST_UPDATE - the spec doc writes its formulas with `DB_*` names.)
+
+**Previous behavior:** the engine (and the spec doc's formulas) used the `DB_*` columns as the original estimate - both as the "Original" side of the comparison and as the base values the factors multiply.
+
+- 🇬🇧 Follow-up to confirm: are the un-prefixed values also quantity-inclusive line totals, like Q4 established for `DB_*`? The engine assumes yes (no multiply by QUANTITY anywhere). Also worth a doc fix: the spec's formulas are written with `DB_*` names.
+- 🇧🇷 Follow-up a confirmar: os valores sem prefixo também são totais por linha com quantidade inclusa, como o Q4 estabeleceu para `DB_*`? O engine assume que sim (não multiplica por QUANTITY em lugar nenhum). Também vale corrigir a doc: as fórmulas do spec usam os nomes `DB_*`.
 
 ### B. Scope & data / Escopo e dados
 
@@ -164,6 +173,7 @@ affect the engine (the canonical schema handles them), but worth confirming:
 
 ## Follow-ups / Próximos passos
 
+- ⬜ **Un-prefixed values quantity-inclusive?** (Q11). 🇬🇧 Q4 confirmed `DB_*` are quantity-inclusive line totals; confirm the same holds for the un-prefixed originals the engine now uses. · 🇧🇷 O Q4 confirmou que as `DB_*` são totais por linha com quantidade; confirmar se o mesmo vale para as colunas sem prefixo que o engine agora usa.
 - ⏳ **ADR "total cost" composition** (Q10). 🇬🇧 Business is checking whether ADR sums hours into "total cost"; if so, the total-cost formula (not just rounding) may need to change. Costs-to-2-decimals is already done. · 🇧🇷 Business verificando se o ADR soma horas dentro do "total cost"; se sim, a fórmula do total (não só o arredondamento) pode mudar. Custos com 2 casas já feito.
 - ⏳ **SME pin: project 1101168 splits** (Q6). 🇬🇧 Review with Emanuel whether 1101168's `NA` vs `USGC Reconfig Studies` splits (base vs scenario, ~4.6k duplicated items) are a data issue. v1 keeps aggregating all splits. · 🇧🇷 Revisar com o Emanuel se os splits `NA` vs `USGC Reconfig Studies` do 1101168 (base vs cenário, ~4,6k itens duplicados) são problema de dado. A v1 mantém a agregação de todos os splits.
 - ⏳ **SME confirm: the 5 labor-only combos** (Q7). 🇬🇧 The app now lets these be selected and flags the missing material; confirm whether the missing MFC for Philippines/Montana/Wyoming 2024 quarters is expected or a reference gap to fill. · 🇧🇷 O app agora permite selecionar e sinaliza o material faltante; confirmar se a ausência de MFC para Philippines/Montana/Wyoming (trimestres 2024) é esperada ou uma lacuna a preencher.

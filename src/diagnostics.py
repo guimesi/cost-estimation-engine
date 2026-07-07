@@ -19,9 +19,9 @@ from __future__ import annotations
 import pandas as pd
 
 from config.schema import (
+    COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_MFC,
-    COL_DB_BM_C,
-    COL_DB_VSF_C,
+    COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_MFC,
 )
 from src.emma_reference import mfc_factor_map
@@ -35,9 +35,11 @@ def mfc_coverage(
 
     Uses the same per-code factor map the engine builds, so a code counts as
     matched here iff the engine would apply its factor (not 1.0). The unmatched
-    cost sums the databook base-material cost on lines whose base-material code
+    cost sums the original base-material cost on lines whose base-material code
     is missing plus the vendor-shop-fab cost on lines whose vendor code is
-    missing - the two material categories the MFC factor scales.
+    missing - the two material categories the MFC factor scales. Weighted by
+    the *_ORIG engine inputs (the same values the factors multiply), never the
+    DB_* reference columns.
     """
     factor_by_code = mfc_factor_map(mfc, selection.location_code, selection.period)
     covered = set(factor_by_code)
@@ -50,10 +52,13 @@ def mfc_coverage(
     missing = sorted(used - covered)
 
     unmatched_material_cost = float(
-        lines.loc[~base_codes.isin(covered), COL_DB_BM_C].sum()
-        + lines.loc[~vsf_codes.isin(covered), COL_DB_VSF_C].sum()
+        lines.loc[~base_codes.isin(covered), COL_BASE_MATERIAL_COST_ORIG].sum()
+        + lines.loc[~vsf_codes.isin(covered), COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
     )
-    total_material_cost = float(lines[COL_DB_BM_C].sum() + lines[COL_DB_VSF_C].sum())
+    total_material_cost = float(
+        lines[COL_BASE_MATERIAL_COST_ORIG].sum()
+        + lines[COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
+    )
 
     return MfcCoverage(
         total_codes=len(used),

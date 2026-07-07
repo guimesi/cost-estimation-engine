@@ -6,6 +6,11 @@
 --
 -- TRY_TO_DOUBLE is used on the DB_*_COST columns because some databook costs
 -- arrive as strings ("0", "9.47"); it returns NULL for non-numeric values.
+--
+-- NOTE (business Q11, 2026-07-07): the engine's REAL original costs are the
+-- columns WITHOUT the DB_ prefix (SPEC_S_C_COST, ...); DB_* are databook
+-- reference values. The Q6 queries below keep DB_* on purpose - they reproduce
+-- the historical duplicate counts (5064 / 4627) computed with those columns.
 
 -- =====================================================================
 -- Q6  Multiple EXECUTION_SPLITs per project (double-counting check)
