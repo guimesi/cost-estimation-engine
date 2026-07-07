@@ -44,6 +44,60 @@ _GLOBAL_CSS = """
 .cee-up   { color: __RED__;   font-weight: 600; }
 .cee-down { color: __GREEN__; font-weight: 600; }
 .cee-flat { color: __YELLOW__; font-weight: 600; }
+
+/* Hover tooltip: calculation rationale on values (step 3). The text lives in
+   the data-tip attribute; newlines in it render as line breaks (pre-line). */
+.cee-tip {
+    position: relative;
+    border-bottom: 1px dotted #9ca3af;
+    cursor: help;
+}
+.cee-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: pre-line;
+    width: max-content;
+    max-width: 360px;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease-in-out;
+    z-index: 1000;
+    pointer-events: none;
+}
+.cee-tip::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 2px);
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease-in-out;
+    z-index: 1000;
+    pointer-events: none;
+}
+.cee-tip:hover::after, .cee-tip:hover::before { opacity: 1; visibility: visible; }
+
+/* Category comparison table (step 3) - HTML so each value can carry a
+   .cee-tip; mirrors st.dataframe's look. */
+.cee-cmp { width: 100%; border-collapse: collapse; margin-bottom: 0.9rem; font-size: 0.9rem; }
+.cee-cmp th, .cee-cmp td { padding: 0.45rem 0.7rem; border-bottom: 1px solid #e5e7eb; }
+.cee-cmp th { text-align: left; color: #6b7280; font-weight: 600; font-size: 0.8rem; }
+.cee-cmp th.num, .cee-cmp td.num { text-align: right; font-variant-numeric: tabular-nums; }
 </style>
 """
 
