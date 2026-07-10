@@ -43,11 +43,30 @@ def main() -> None:
     scope = ""
     params = []
     if planview:
-        scope = (
-            f" AND c.ROW_ID IN (SELECT ROW_ID FROM {item_t} WHERE PLANVIEW_ID = %s)"
+        # Match the app's scope: only the project's LATEST snapshot (the same
+        # gate ranking the repository uses), not every gate in the table.
+        import pandas as pd
+
+        from src.adr_repository import _snapshot_rank
+
+        snaps = client.fetch_query(
+            f"SELECT DISTINCT SNAPSHOT FROM {item_t} WHERE PLANVIEW_ID = %s",
+            params=[planview],
         )
-        params = [planview]
-        print(f"Scope: PLANVIEW_ID = {planview}")
+        if snaps.empty:
+            print(f"No rows for PLANVIEW_ID = {planview}")
+            return
+        latest = snaps.loc[
+            _snapshot_rank(pd.Series(snaps["SNAPSHOT"])).idxmax(), "SNAPSHOT"
+        ]
+        scope = (
+            f" AND c.ROW_ID IN (SELECT ROW_ID FROM {item_t} "
+            "WHERE PLANVIEW_ID = %s AND SNAPSHOT = %s)"
+        )
+        params = [planview, latest]
+        print(f"Scope: PLANVIEW_ID = {planview} at latest snapshot {latest!r}")
+        print("(the app estimates this snapshot only; step-2 split filters can "
+              "still make the app's counts smaller)")
 
     for code_col, cost_col in _PAIRS:
         no_code = _NO_CODE.format(code=f"c.{code_col}")
