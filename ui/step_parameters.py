@@ -75,6 +75,15 @@ def _render_coverage(lines: pd.DataFrame, selection: FactorSelection) -> None:
     """
     cov = mfc_coverage(lines, load_mfc(), selection)
 
+    # Lines with NO MFC code (NULL in ADR) are zeroed by the engine, a
+    # different case from a reference gap - surface it up front too.
+    if cov.no_code_lines:
+        st.info(
+            f"ℹ {cov.no_code_lines} line(s) have no MFC code in ADR; their "
+            f"updated material cost will be 0 "
+            f"({fmt_money(cov.no_code_material_cost)} of original material cost)."
+        )
+
     if cov.is_fully_covered:
         st.success(
             f"✓ All {cov.total_codes} material code(s) have an MFC factor for "

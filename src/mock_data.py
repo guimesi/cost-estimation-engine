@@ -237,6 +237,14 @@ def _build_adr_master() -> pd.DataFrame:
                 # between the two sets shows up in tests.
                 for orig_col, ref_col in _DB_REFERENCE_TWINS:
                     row[ref_col] = round(row[orig_col] * 0.9, 2)
+                # A few lines carry NO MFC code, like the real ADR (NULL ->
+                # canonical ""): the engine zeroes their updated material cost
+                # (business rule 2026-07-10). Index-derived, no RNG draw - the
+                # code WAS drawn above, we just blank it - so nothing shifts.
+                if i % 13 == 7:
+                    row[COL_BASE_MATERIAL_MFC] = ""
+                if i % 17 == 11:
+                    row[COL_VENDOR_SHOP_FAB_MFC] = ""
                 rows.append(row)
     return pd.DataFrame(rows)
 

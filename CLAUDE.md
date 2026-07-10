@@ -166,16 +166,24 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
      on the item table). The `ui/_data.py` `st.cache_data` layer then makes
      re-opening a project instant.
    The engine and UI never change - all of this lives in the repo + schema.
-4. **Missing MFC factor for a line's code** -> factor `1.0` (cost unchanged)
-   plus a recorded warning, never a dropped line (confirmed by business Q3,
-   2026-06-19). Each line ALSO carries an explicit
-   `BASE_MATERIAL_FACTOR_MISSING` / `VENDOR_SHOP_FAB_FACTOR_MISSING` flag
-   (in the CSV + the step-3 line table) so a missing factor is distinguishable
-   from a real factor that equals 1.0. (A broader data-quality rule ensuring
-   every material has a valid MFC is a separate follow-up, owned by the data
-   pipeline, not this engine.) **Missing LRC** for the selection raises
-   `LookupError` (a guard - the UI only offers selections present in both
-   references).
+4. **Two distinct "no MFC" cases - do not conflate them** (business Q3
+   2026-06-19 + Q12 2026-07-10):
+   - **Line has NO MFC code** (NULL/blank in ADR): the material calculation is
+     not executed and the updated cost is **0** (factor 0, flag
+     `BASE_MATERIAL_CODE_MISSING` / `VENDOR_SHOP_FAB_CODE_MISSING`, warning,
+     step-2 info, "∅ no code (0)" in the step-3 line table). NULL-ish codes are
+     normalized to `""` by the repository; `estimation_engine.blank_code_mask`
+     is the shared detector (diagnostics reuses it so the preview can't
+     disagree).
+   - **Line has a code but EMMA has no factor** for the selection -> factor
+     `1.0` (cost unchanged) plus a recorded warning, never a dropped line (Q3).
+     Flagged per line via `BASE_MATERIAL_FACTOR_MISSING` /
+     `VENDOR_SHOP_FAB_FACTOR_MISSING` (CSV + step-3 table) so a missing factor
+     is distinguishable from a real factor that equals 1.0. (A broader
+     data-quality rule ensuring every material has a valid MFC is a separate
+     follow-up, owned by the data pipeline, not this engine.)
+   **Missing LRC** for the selection raises `LookupError` (a guard - the UI
+   only offers selections present in both references).
 5. **Original values are quantity-inclusive line totals** (business Q4,
    2026-06-19, answered for `DB_*`; assumed to hold for the un-prefixed
    originals too - open follow-up in docs/business-questions.md): factors are

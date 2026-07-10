@@ -27,10 +27,18 @@ Totals:
     TOTAL_COST_NEW  = VENDOR_SHOP_FAB_COST_NEW + SPEC_COST_NEW
                       + BASE_MATERIAL_COST_NEW + FSF_COST_NEW + FIELD_LABOR_COST_NEW
 
-A missing MFC factor for a line's code is treated as factor ``1.0`` (cost
-unchanged) and recorded as a warning, never silently dropped. A missing LRC
-factor for the selection raises ``LookupError`` - the UI only offers
-selections present in both references, so this is a guard, not a normal path.
+Two distinct "no MFC" cases (do not conflate them):
+
+- **Line has NO MFC code** (NULL/blank in ADR): the material calculation is
+  not executed and the updated cost is **0** (business rule, 2026-07-10).
+  Flagged per line via ``*_CODE_MISSING`` + a warning.
+- **Line has a code but EMMA has no factor** for the selection: factor
+  ``1.0`` (cost unchanged), flagged per line via ``*_FACTOR_MISSING`` + a
+  warning, never silently dropped (business Q3, 2026-06-19).
+
+A missing LRC factor for the selection raises ``LookupError`` - the UI only
+offers selections present in both references, so this is a guard, not a
+normal path.
 """
 from __future__ import annotations
 
@@ -39,6 +47,7 @@ from typing import List, Tuple
 import pandas as pd
 
 from config.schema import (
+    COL_BASE_MATERIAL_CODE_MISSING,
     COL_BASE_MATERIAL_COST_NEW,
     COL_BASE_MATERIAL_COST_ORIG,
     COL_BASE_MATERIAL_FACTOR,
@@ -60,6 +69,7 @@ from config.schema import (
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
+    COL_VENDOR_SHOP_FAB_CODE_MISSING,
     COL_VENDOR_SHOP_FAB_COST_NEW,
     COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_FACTOR,
@@ -106,15 +116,33 @@ def estimate_lines(
     # --- Material: Base Material + Vendor Shop Fabrication (MFC per code) ---
     factor_by_code = mfc_factor_map(mfc, selection.location_code, selection.period)
 
+    # Lines with NO MFC code at all (NULL/blank in ADR): the calculation is not
+    # executed and the updated cost is 0 (business rule, 2026-07-10). Flagged
+    # separately from the factor-missing case below.
+    base_blank = blank_code_mask(df[COL_BASE_MATERIAL_MFC])
+    vsf_blank = blank_code_mask(df[COL_VENDOR_SHOP_FAB_MFC])
+    df[COL_BASE_MATERIAL_CODE_MISSING] = base_blank
+    df[COL_VENDOR_SHOP_FAB_CODE_MISSING] = vsf_blank
+    for mask, col_name in ((base_blank, COL_BASE_MATERIAL_MFC),
+                           (vsf_blank, COL_VENDOR_SHOP_FAB_MFC)):
+        if mask.any():
+            warnings.append(
+                f"{int(mask.sum())} line(s) have no {col_name} code; their "
+                "updated cost for that category is 0 (calculation not executed)."
+            )
+
     df[COL_BASE_MATERIAL_FACTOR] = df[COL_BASE_MATERIAL_MFC].map(factor_by_code)
     df[COL_VENDOR_SHOP_FAB_FACTOR] = df[COL_VENDOR_SHOP_FAB_MFC].map(factor_by_code)
 
-    # Flag the lines whose factor is missing (NaN) BEFORE defaulting to 1.0, so a
-    # missing factor is distinguishable from a real factor that equals 1.0.
-    df[COL_BASE_MATERIAL_FACTOR_MISSING] = df[COL_BASE_MATERIAL_FACTOR].isna()
-    df[COL_VENDOR_SHOP_FAB_FACTOR_MISSING] = df[COL_VENDOR_SHOP_FAB_FACTOR].isna()
+    # Flag the lines whose CODE exists but has no factor (NaN) BEFORE defaulting
+    # to 1.0, so a missing factor is distinguishable from a real factor that
+    # equals 1.0. Blank-code lines are the CODE_MISSING case, not this one.
+    df[COL_BASE_MATERIAL_FACTOR_MISSING] = df[COL_BASE_MATERIAL_FACTOR].isna() & ~base_blank
+    df[COL_VENDOR_SHOP_FAB_FACTOR_MISSING] = (
+        df[COL_VENDOR_SHOP_FAB_FACTOR].isna() & ~vsf_blank
+    )
 
-    missing = _collect_missing_codes(df, factor_by_code)
+    missing = _collect_missing_codes(df, factor_by_code, base_blank, vsf_blank)
     if missing:
         warnings.append(
             "No MFC factor for "
@@ -124,6 +152,10 @@ def estimate_lines(
         )
     df[COL_BASE_MATERIAL_FACTOR] = df[COL_BASE_MATERIAL_FACTOR].fillna(1.0)
     df[COL_VENDOR_SHOP_FAB_FACTOR] = df[COL_VENDOR_SHOP_FAB_FACTOR].fillna(1.0)
+    # Blank-code lines: factor 0 -> updated cost 0 (rule above). Applied AFTER
+    # the 1.0 fill so it always wins for those lines.
+    df.loc[base_blank, COL_BASE_MATERIAL_FACTOR] = 0.0
+    df.loc[vsf_blank, COL_VENDOR_SHOP_FAB_FACTOR] = 0.0
 
     df[COL_BASE_MATERIAL_COST_NEW] = (
         df[COL_BASE_MATERIAL_COST_ORIG] * df[COL_BASE_MATERIAL_FACTOR]
@@ -141,9 +173,25 @@ def estimate_lines(
     return df, warnings
 
 
-def _collect_missing_codes(df: pd.DataFrame, factor_by_code: dict) -> set:
-    """Material codes present on lines but absent from the factor map."""
-    used = set(df[COL_BASE_MATERIAL_MFC]) | set(df[COL_VENDOR_SHOP_FAB_MFC])
+def blank_code_mask(codes: pd.Series) -> pd.Series:
+    """True where the line carries no usable MFC code (NULL/blank in ADR)."""
+    text = codes.astype(str).str.strip().str.lower()
+    return codes.isna() | text.isin(("", "nan", "none", "null"))
+
+
+def _collect_missing_codes(
+    df: pd.DataFrame, factor_by_code: dict,
+    base_blank: pd.Series, vsf_blank: pd.Series,
+) -> set:
+    """Material codes present on lines but absent from the factor map.
+
+    Blank/NULL codes are excluded - they are the CODE_MISSING (cost 0) case,
+    not a reference gap.
+    """
+    used = (
+        set(df.loc[~base_blank, COL_BASE_MATERIAL_MFC])
+        | set(df.loc[~vsf_blank, COL_VENDOR_SHOP_FAB_MFC])
+    )
     return {str(code) for code in used if code not in factor_by_code}
 
 

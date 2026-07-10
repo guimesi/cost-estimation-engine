@@ -25,6 +25,7 @@ from config.schema import (
     COL_VENDOR_SHOP_FAB_MFC,
 )
 from src.emma_reference import mfc_factor_map
+from src.estimation_engine import blank_code_mask
 from src.models import FactorSelection, MfcCoverage
 
 
@@ -40,24 +41,37 @@ def mfc_coverage(
     missing - the two material categories the MFC factor scales. Weighted by
     the *_ORIG engine inputs (the same values the factors multiply), never the
     DB_* reference columns.
+
+    Lines with NO MFC code at all (NULL/blank) are a separate bucket, mirroring
+    the engine (business rule 2026-07-10): they are excluded from the code
+    coverage sets/costs and reported via ``no_code_lines`` /
+    ``no_code_material_cost`` - their updated cost will be 0, not "unchanged".
     """
     factor_by_code = mfc_factor_map(mfc, selection.location_code, selection.period)
     covered = set(factor_by_code)
 
     base_codes = lines[COL_BASE_MATERIAL_MFC].astype(str)
     vsf_codes = lines[COL_VENDOR_SHOP_FAB_MFC].astype(str)
+    base_blank = blank_code_mask(lines[COL_BASE_MATERIAL_MFC])
+    vsf_blank = blank_code_mask(lines[COL_VENDOR_SHOP_FAB_MFC])
 
-    used = set(base_codes) | set(vsf_codes)
+    used = set(base_codes[~base_blank]) | set(vsf_codes[~vsf_blank])
     matched = used & covered
     missing = sorted(used - covered)
 
     unmatched_material_cost = float(
-        lines.loc[~base_codes.isin(covered), COL_BASE_MATERIAL_COST_ORIG].sum()
-        + lines.loc[~vsf_codes.isin(covered), COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
+        lines.loc[~base_codes.isin(covered) & ~base_blank,
+                  COL_BASE_MATERIAL_COST_ORIG].sum()
+        + lines.loc[~vsf_codes.isin(covered) & ~vsf_blank,
+                    COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
     )
     total_material_cost = float(
         lines[COL_BASE_MATERIAL_COST_ORIG].sum()
         + lines[COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
+    )
+    no_code_material_cost = float(
+        lines.loc[base_blank, COL_BASE_MATERIAL_COST_ORIG].sum()
+        + lines.loc[vsf_blank, COL_VENDOR_SHOP_FAB_COST_ORIG].sum()
     )
 
     return MfcCoverage(
@@ -66,4 +80,6 @@ def mfc_coverage(
         missing_codes=missing,
         total_material_cost=total_material_cost,
         unmatched_material_cost=unmatched_material_cost,
+        no_code_lines=int((base_blank | vsf_blank).sum()),
+        no_code_material_cost=no_code_material_cost,
     )

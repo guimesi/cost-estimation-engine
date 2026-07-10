@@ -81,6 +81,11 @@ class MfcCoverage:
     missing_codes: List[str]
     total_material_cost: float
     unmatched_material_cost: float
+    # Lines with NO MFC code at all (NULL/blank in ADR): the engine sets their
+    # updated material cost to 0 (business rule 2026-07-10). Tracked separately
+    # from missing_codes, which is a reference gap for codes that DO exist.
+    no_code_lines: int = 0
+    no_code_material_cost: float = 0.0
 
     @property
     def missing_count(self) -> int:

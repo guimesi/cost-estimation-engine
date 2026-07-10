@@ -14,6 +14,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from config.schema import (
+    COL_BASE_MATERIAL_CODE_MISSING,
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_DESCRIPTION,
     COL_EXECUTION_SPLIT,
@@ -25,6 +26,7 @@ from config.schema import (
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
+    COL_VENDOR_SHOP_FAB_CODE_MISSING,
     COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
     COL_WBS,
     COST_CATEGORIES,
@@ -72,6 +74,10 @@ def _run_rationale(result: EstimationResult) -> dict:
         "bm": int(lines[COL_BASE_MATERIAL_FACTOR_MISSING].sum()),
         "vsf": int(lines[COL_VENDOR_SHOP_FAB_FACTOR_MISSING].sum()),
     }
+    no_code_by_key = {
+        "bm": int(lines[COL_BASE_MATERIAL_CODE_MISSING].sum()),
+        "vsf": int(lines[COL_VENDOR_SHOP_FAB_CODE_MISSING].sum()),
+    }
 
     cost_orig, cost_new, hour_orig, hour_new = {}, {}, {}, {}
     for c in HOUR_CATEGORIES:
@@ -96,15 +102,21 @@ def _run_rationale(result: EstimationResult) -> dict:
             cmp = next(x for x in result.cost_categories if x.key == c.key)
             eff = f"{cmp.updated / cmp.original:.3f}" if cmp.original else "n/a"
             missing = missing_by_key.get(c.key, 0)
+            no_code = no_code_by_key.get(c.key, 0)
             miss_note = (
                 f"\n⚠ {missing} line(s) had no MFC factor (kept at 1.0)."
                 if missing
                 else ""
             )
+            no_code_note = (
+                f"\n∅ {no_code} line(s) have no MFC code (updated cost 0)."
+                if no_code
+                else ""
+            )
             cost_new[c.key] = (
                 f"{c.new_col} = {c.orig_col} × MFC factor\n"
                 f"Factor matched per line's material code for {sel}.\n"
-                f"Blended effective factor = {eff}{miss_note}"
+                f"Blended effective factor = {eff}{miss_note}{no_code_note}"
             )
 
     cost_labels = " + ".join(c.label for c in COST_CATEGORIES)
@@ -313,13 +325,22 @@ def _render_line_table(result: EstimationResult) -> None:
             view[COL_BASE_MATERIAL_FACTOR_MISSING]
             | view[COL_VENDOR_SHOP_FAB_FACTOR_MISSING]
         )
+        code_missing = (
+            view[COL_BASE_MATERIAL_CODE_MISSING]
+            | view[COL_VENDOR_SHOP_FAB_CODE_MISSING]
+        )
+        # A line can hit both cases (one side without code, the other without
+        # factor); the no-code marker wins since cost 0 is the stronger effect.
+        mfc_status = pd.Series("", index=view.index)
+        mfc_status[mfc_missing] = "⚠ missing"
+        mfc_status[code_missing] = "∅ no code (0)"
         table = pd.DataFrame(
             {
                 "Item": view[COL_ITEM_ID].astype(str),
                 "WBS": view[COL_WBS].astype(str),
                 "Description": view[COL_DESCRIPTION].astype(str),
                 "Qty": view[COL_QUANTITY].map(fmt_qty),
-                "MFC": mfc_missing.map({True: "⚠ missing", False: ""}),
+                "MFC": mfc_status,
                 "Cost (orig)": view[COL_TOTAL_COST_ORIG].map(fmt_money),
                 "Cost (new)": view[COL_TOTAL_COST_NEW].map(fmt_money),
                 "Δ Cost": (view[COL_TOTAL_COST_NEW] - view[COL_TOTAL_COST_ORIG]).map(
@@ -374,6 +395,11 @@ def _render_line_table(result: EstimationResult) -> None:
             st.caption(
                 "⚠ MFC missing: no material factor for the selection; that line's "
                 "material cost was left unchanged (factor 1.0)."
+            )
+        if code_missing.any():
+            st.caption(
+                "∅ no code (0): the line has no MFC code in ADR; the material "
+                "calculation is not executed and its updated cost is 0."
             )
 
 

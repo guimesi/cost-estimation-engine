@@ -63,6 +63,19 @@ def test_partial_coverage_sums_only_missing_code_cost():
     assert not cov.is_fully_covered
 
 
+def test_blank_codes_are_a_separate_bucket_not_missing_codes():
+    # Row 0 loses its base code (NULL in ADR): it is NOT a reference gap - the
+    # engine zeroes it - so coverage reports it via the no_code_* fields.
+    lines = _lines()
+    lines.loc[0, COL_BASE_MATERIAL_MFC] = None
+    cov = mfc_coverage(lines, _mfc(["A", "B", "C"]), _SEL)
+    assert cov.missing_codes == []          # A/B/C all still covered
+    assert cov.total_codes == 3             # blank not counted as a code
+    assert cov.no_code_lines == 1
+    assert cov.no_code_material_cost == 100.0  # row 0 base-material cost
+    assert cov.unmatched_material_cost == 0.0
+
+
 def test_wrong_period_misses_everything():
     other = FactorSelection(location_code="L1", location_name="Loc 1", period="P2")
     cov = mfc_coverage(_lines(), _mfc(["A", "B", "C"]), other)

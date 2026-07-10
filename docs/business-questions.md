@@ -20,6 +20,7 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 3. ✏️ **Missing MFC factor** - 🇬🇧 Keep unchanged (factor 1.0) + flag it; added a per-line missing-MFC flag (CSV + results). DQ rule = separate follow-up. · 🇧🇷 Manter inalterado (fator 1.0) + sinalizar; adicionado flag por linha (CSV + resultados). Regra de DQ = follow-up separado. **Done.**
 4. ✏️ **QUANTITY** - 🇬🇧 `DB_*` are already quantity-inclusive totals (no extra multiply); QUANTITY is display-only, now shown in the step-3 table + CSV. · 🇧🇷 `DB_*` já são totais com quantidade (sem multiplicar de novo); QUANTITY é só visualização, agora na tabela do step 3 + CSV. **Done.**
 11. ✏️ **DB_* vs un-prefixed cost columns** - 🇬🇧 The REAL original hours/costs are the columns WITHOUT the `DB_` prefix (`SPEC_S_C`, `SPEC_S_C_COST`, ...); `DB_*` are databook reference only, kept for display. Engine rewired. · 🇧🇷 As horas/custos originais REAIS são as colunas SEM o prefixo `DB_` (`SPEC_S_C`, `SPEC_S_C_COST`, ...); as `DB_*` são só referência do databook, mantidas para exibição. Engine reapontado. **Done.**
+12. ✏️ **NULL MFC code -> updated cost 0** - 🇬🇧 When the line's `BASE_MATERIAL_MFC` / `VENDOR_SHOP_FAB_MFC` is NULL, the material calculation is not executed and the updated cost is 0. The EMMA-gap case (code present, factor missing) stays as Q3: keep at 1.0 + flag. · 🇧🇷 Quando o `BASE_MATERIAL_MFC` / `VENDOR_SHOP_FAB_MFC` da linha é NULL, o cálculo de material não roda e o custo atualizado é 0. O caso de lacuna na EMMA (código presente, fator faltando) segue como Q3: mantém 1.0 + flag. **Done.**
 
 **B. Scope & data / Escopo e dados**
 
@@ -78,6 +79,14 @@ Status: ⬜ open · ⏸ parked (not sent) · ⏳ awaiting business · ✅ confir
 
 - 🇬🇧 Follow-up to confirm: are the un-prefixed values also quantity-inclusive line totals, like Q4 established for `DB_*`? The engine assumes yes (no multiply by QUANTITY anywhere). Also worth a doc fix: the spec's formulas are written with `DB_*` names.
 - 🇧🇷 Follow-up a confirmar: os valores sem prefixo também são totais por linha com quantidade inclusa, como o Q4 estabeleceu para `DB_*`? O engine assume que sim (não multiplica por QUANTITY em lugar nenhum). Também vale corrigir a doc: as fórmulas do spec usam os nomes `DB_*`.
+
+#### Q12 - NULL MFC code on the line -> updated material cost 0  ✏️ RESOLVED (2026-07-10)
+**Resolution:** business fix to the material calculation: when the line's MFC code is NULL in ADR (`BASE_MATERIAL_MFC` for Base Material, `VENDOR_SHOP_FAB_MFC` for Vendor Shop Fab), the calculation is **not executed** and the expected updated cost is **0**. Confirmed scope: this applies ONLY to the NULL-code case; the Q3 case (code present, EMMA factor missing for the selection) keeps today's behavior - cost unchanged (factor 1.0) + flag. Implemented: factor 0 per blank-code line side, per-line `*_CODE_MISSING` flags (line-level CSV + "∅ no code (0)" in the step-3 table), an engine warning, and a step-2 info with the zeroed original material cost. NULL-ish codes are normalized to `""` at ingestion.
+
+**Previous behavior:** a NULL code fell into the same bucket as a missing EMMA factor: cost kept unchanged (factor 1.0) + flagged.
+
+- 🇬🇧 Follow-up (data quality): should lines without any MFC code exist in ADR at all? If they are data errors, the zeroing hides them from the total - worth a DQ rule alongside the Q3 one.
+- 🇧🇷 Follow-up (qualidade de dados): linhas sem código MFC deveriam existir no ADR? Se forem erro de dado, o zeramento as esconde do total - vale uma regra de DQ junto com a do Q3.
 
 ### B. Scope & data / Escopo e dados
 

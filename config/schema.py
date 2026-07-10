@@ -125,6 +125,12 @@ COL_VENDOR_SHOP_FAB_FACTOR = "VENDOR_SHOP_FAB_FACTOR"
 # legitimate factor that happens to equal 1.0.
 COL_BASE_MATERIAL_FACTOR_MISSING = "BASE_MATERIAL_FACTOR_MISSING"
 COL_VENDOR_SHOP_FAB_FACTOR_MISSING = "VENDOR_SHOP_FAB_FACTOR_MISSING"
+# Per-line flags: True when the line carries NO MFC code at all (NULL/blank in
+# ADR). Business rule (2026-07-10): the material calculation is not executed
+# for these lines and the updated cost is 0. A different case from
+# FACTOR_MISSING above (code present, EMMA factor absent -> kept at 1.0).
+COL_BASE_MATERIAL_CODE_MISSING = "BASE_MATERIAL_CODE_MISSING"
+COL_VENDOR_SHOP_FAB_CODE_MISSING = "VENDOR_SHOP_FAB_CODE_MISSING"
 
 # =============================================================================
 # EMMA reference columns (canonical, post-ingestion)

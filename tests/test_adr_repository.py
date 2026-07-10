@@ -93,7 +93,8 @@ def _raw_cost_results() -> pd.DataFrame:
             "DB_FIELD_LABOR_COST": [9.47, 3.0, 1.0],
             "DB_BASE_MATERIAL_COST": [0.44, 0.2, 5.0],
             "DB_VENDOR_SHOP_FAB_COST": [328.0, 100.0, 0.0],
-            "BASE_MATERIAL_MFC": ["313.01", "313.01", "200.01"],
+            # PV2's base code is NULL, like the real export -> canonical "".
+            "BASE_MATERIAL_MFC": ["313.01", "313.01", None],
             "VENDOR_SHOP_FAB_MFC": ["313.08", "313.08", "200.08"],
         }
     )
@@ -197,3 +198,5 @@ def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):
     # NULL split labels are normalized to a visible, selectable bucket.
     pv2 = repo.load_project_lines("PV2")
     assert (pv2[COL_EXECUTION_SPLIT] == "(not set)").all()
+    # NULL MFC codes are normalized to "" (the engine's "no code" marker).
+    assert (pv2[COL_BASE_MATERIAL_MFC] == "").all()

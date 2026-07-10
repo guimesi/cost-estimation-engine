@@ -180,12 +180,18 @@ def _sf_load_project_lines(project_id: str) -> pd.DataFrame:
 
 
 def _coerce_line_numerics(df: pd.DataFrame) -> pd.DataFrame:
-    """Coerce databook numerics (some arrive as strings) and normalize MFC codes."""
+    """Coerce databook numerics (some arrive as strings) and normalize MFC codes.
+
+    NULL-ish MFC codes (real NULL, "nan", "none", "null", whitespace) become ""
+    so the engine sees one canonical "no code" marker (those lines get updated
+    material cost 0 - business rule 2026-07-10).
+    """
     for col in ADR_LINE_NUMERIC_COLUMNS:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
     for col in (COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC):
-        df[col] = df[col].astype(str).str.strip()
+        codes = df[col].fillna("").astype(str).str.strip()
+        df[col] = codes.mask(codes.str.lower().isin(("nan", "none", "null")), "")
     return df
 
 

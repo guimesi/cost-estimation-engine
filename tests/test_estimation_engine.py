@@ -7,8 +7,10 @@ import pandas as pd
 import pytest
 
 from config.schema import (
+    COL_BASE_MATERIAL_CODE_MISSING,
     COL_BASE_MATERIAL_COST_NEW,
     COL_BASE_MATERIAL_COST_ORIG,
+    COL_BASE_MATERIAL_FACTOR,
     COL_BASE_MATERIAL_FACTOR_MISSING,
     COL_BASE_MATERIAL_MFC,
     COL_FIELD_LABOR_COST_NEW,
@@ -27,6 +29,7 @@ from config.schema import (
     COL_TOTAL_COST_ORIG,
     COL_TOTAL_HOURS_NEW,
     COL_TOTAL_HOURS_ORIG,
+    COL_VENDOR_SHOP_FAB_CODE_MISSING,
     COL_VENDOR_SHOP_FAB_COST_NEW,
     COL_VENDOR_SHOP_FAB_COST_ORIG,
     COL_VENDOR_SHOP_FAB_FACTOR_MISSING,
@@ -112,6 +115,38 @@ def test_missing_mfc_code_warns_and_keeps_cost():
     # The vendor code (C2) is flagged missing; the base code (C1) is not.
     assert r[COL_VENDOR_SHOP_FAB_FACTOR_MISSING]
     assert not r[COL_BASE_MATERIAL_FACTOR_MISSING]
+
+
+@pytest.mark.parametrize("blank", [None, "", "  ", "nan", "None", "NULL"])
+def test_null_base_material_code_zeroes_cost(blank):
+    # Business rule 2026-07-10: NO MFC code on the line -> calculation not
+    # executed, updated cost 0. Distinct from the factor-missing case (Q3).
+    lines = _one_line()
+    lines[COL_BASE_MATERIAL_MFC] = blank
+    out, warnings = estimate_lines(lines, _mfc(), _lrc(), SELECTION)
+    r = out.iloc[0]
+    assert r[COL_BASE_MATERIAL_COST_NEW] == 0.0
+    assert r[COL_BASE_MATERIAL_FACTOR] == 0.0
+    assert r[COL_BASE_MATERIAL_CODE_MISSING]
+    # It is NOT the factor-missing case, and no reference-gap warning fires.
+    assert not r[COL_BASE_MATERIAL_FACTOR_MISSING]
+    assert any("no BASE_MATERIAL_MFC code" in w for w in warnings)
+    assert not any("No MFC factor" in w for w in warnings)
+    # The vendor side (code C2 present + factored) is untouched.
+    assert r[COL_VENDOR_SHOP_FAB_COST_NEW] == pytest.approx(1800.0)
+    assert not r[COL_VENDOR_SHOP_FAB_CODE_MISSING]
+
+
+def test_null_vendor_code_zeroes_cost_and_totals_reflect_it():
+    lines = _one_line()
+    lines[COL_VENDOR_SHOP_FAB_MFC] = None
+    out, warnings = estimate_lines(lines, _mfc(), _lrc(), SELECTION)
+    r = out.iloc[0]
+    assert r[COL_VENDOR_SHOP_FAB_COST_NEW] == 0.0
+    assert r[COL_VENDOR_SHOP_FAB_CODE_MISSING]
+    assert any("no VENDOR_SHOP_FAB_MFC code" in w for w in warnings)
+    # Total: 550 (spec) + 1100 (fsf) + 275 (fl) + 1200 (bm) + 0 (vsf zeroed).
+    assert r[COL_TOTAL_COST_NEW] == pytest.approx(3125.0)
 
 
 def test_missing_lrc_raises():
