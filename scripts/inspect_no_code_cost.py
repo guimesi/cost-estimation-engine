@@ -11,7 +11,9 @@ visibly changes).
 
     DATA_SOURCE=snowflake python scripts/inspect_no_code_cost.py [PLANVIEW_ID]
 
-Read-only.
+Read-only. TRY_TO_DOUBLE goes through TO_VARCHAR because the un-prefixed cost
+columns are NUMBER(18,2) in the live schema (observed 2026-07-10) - unlike the
+string-typed DB_* twins - and TRY_TO_DOUBLE only accepts VARCHAR.
 """
 from __future__ import annotations
 
@@ -54,9 +56,9 @@ def main() -> None:
         df = client.fetch_query(
             f"SELECT COUNT(*) AS TOTAL_LINES, "
             f"SUM(IFF({no_code}, 1, 0)) AS NO_CODE_LINES, "
-            f"SUM(IFF({no_code}, COALESCE(TRY_TO_DOUBLE(c.{cost_col}), 0), 0)) "
+            f"SUM(IFF({no_code}, COALESCE(TRY_TO_DOUBLE(TO_VARCHAR(c.{cost_col})), 0), 0)) "
             f"  AS NO_CODE_COST, "
-            f"SUM(IFF({no_code} AND COALESCE(TRY_TO_DOUBLE(c.{cost_col}), 0) <> 0, "
+            f"SUM(IFF({no_code} AND COALESCE(TRY_TO_DOUBLE(TO_VARCHAR(c.{cost_col})), 0) <> 0, "
             f"  1, 0)) AS NO_CODE_LINES_WITH_COST "
             f"FROM {cost_t} c WHERE 1=1{scope}",
             params=params or None,
@@ -69,7 +71,7 @@ def main() -> None:
 
         sample = client.fetch_query(
             f"SELECT c.ROW_ID, c.{cost_col} FROM {cost_t} c "
-            f"WHERE {no_code} AND COALESCE(TRY_TO_DOUBLE(c.{cost_col}), 0) <> 0"
+            f"WHERE {no_code} AND COALESCE(TRY_TO_DOUBLE(TO_VARCHAR(c.{cost_col})), 0) <> 0"
             f"{scope} LIMIT 5",
             params=params or None,
         )
