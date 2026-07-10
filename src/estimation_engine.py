@@ -123,12 +123,18 @@ def estimate_lines(
     vsf_blank = blank_code_mask(df[COL_VENDOR_SHOP_FAB_MFC])
     df[COL_BASE_MATERIAL_CODE_MISSING] = base_blank
     df[COL_VENDOR_SHOP_FAB_CODE_MISSING] = vsf_blank
-    for mask, col_name in ((base_blank, COL_BASE_MATERIAL_MFC),
-                           (vsf_blank, COL_VENDOR_SHOP_FAB_MFC)):
+    # The warning carries the zeroed ORIGINAL cost so it is self-evident when
+    # the rule cannot move the totals (no-code lines often hold zero cost).
+    for mask, col_name, cost_col in (
+        (base_blank, COL_BASE_MATERIAL_MFC, COL_BASE_MATERIAL_COST_ORIG),
+        (vsf_blank, COL_VENDOR_SHOP_FAB_MFC, COL_VENDOR_SHOP_FAB_COST_ORIG),
+    ):
         if mask.any():
+            zeroed = float(df.loc[mask, cost_col].sum())
             warnings.append(
                 f"{int(mask.sum())} line(s) have no {col_name} code; their "
-                "updated cost for that category is 0 (calculation not executed)."
+                "updated cost for that category is 0 (calculation not "
+                f"executed). Original cost on those lines: {zeroed:,.2f}."
             )
 
     df[COL_BASE_MATERIAL_FACTOR] = df[COL_BASE_MATERIAL_MFC].map(factor_by_code)
