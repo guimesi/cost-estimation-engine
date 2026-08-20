@@ -26,8 +26,9 @@ the full 3-step flow works with no warehouse connection.
 
 1. **Project** - pick a project that has ADR estimations loaded (latest
    snapshot is used).
-2. **Location & Period** - choose from the (Location, Period) pairs present in
-   both the MFC and LRC reference data.
+2. **Location & Period** - pick which EXECUTION_SPLITs to include, then any
+   (Location, Period) pair with an LRC labor factor; missing material (MFC)
+   coverage is flagged, not hidden (business Q7).
 3. **Estimation** - see total cost & hours (original vs updated, absolute + %),
    a per-category breakdown (Specialty Subcontractor, Vendor Shop, Base
    Material, Field Shop Fabrication, Field Labor), grouped bar charts, and two
@@ -40,23 +41,28 @@ For the selected location/period the engine pulls one labor factor + USD rate
 
 | Category | Type | Formula |
 |---|---|---|
-| Specialty Subcontractor | labor | `SPEC_H_NEW = DB_SPEC_H × F_lrc` ; `SPEC_COST_NEW = SPEC_H_NEW × USD_R` |
-| Field Shop Fabrication | labor | `FSF_H_NEW = DB_FSF_H × F_lrc` ; `FSF_COST_NEW = FSF_H_NEW × USD_R` |
-| Base Material | material | `BASE_MATERIAL_COST_NEW = DB_BM_C × F_mfc[base_code]` |
-| Vendor Shop Fabrication | material | `VENDOR_SHOP_FAB_COST_NEW = DB_VSF_C × F_mfc[vsf_code]` |
-| Field Labor | pass-through | carried from ADR databook (no factor) |
-| **Total Cost** | | `VSF + SPEC + BM + FSF + FIELD_LABOR` |
+| Specialty Subcontractor | labor | `SPEC_H_NEW = SPEC_H_ORIG × F_lrc` ; `SPEC_COST_NEW = SPEC_H_NEW × USD_R` |
+| Field Shop Fabrication | labor | `FSF_H_NEW = FSF_H_ORIG × F_lrc` ; `FSF_COST_NEW = FSF_H_NEW × USD_R` |
+| Field Labor | labor | `FIELD_LABOR_H_NEW = FIELD_LABOR_H_ORIG × F_lrc` ; `FIELD_LABOR_COST_NEW = FIELD_LABOR_H_NEW × USD_R` |
+| Base Material | material | `BASE_MATERIAL_COST_NEW = BASE_MATERIAL_COST_ORIG × F_mfc[base_code]` |
+| Vendor Shop Fabrication | material | `VENDOR_SHOP_FAB_COST_NEW = VENDOR_SHOP_FAB_COST_ORIG × F_mfc[vsf_code]` |
+| **Total Cost** | | `VSF + SPEC + BM + FSF + FIELD_LABOR` (the 5 `*_NEW` costs) |
 | **Total Hours** | | `SPEC_H + FSF_H + FIELD_LABOR_H` |
 
-Confirmed interpretations of the spec: **Field Labor is a pass-through** (the
-doc lists it only as a totals input), and the **single LRC factor per
-(location, period) applies to both labor categories** (no labor-type code in
-LRC). See [CLAUDE.md](CLAUDE.md) for the full assumptions log.
+Confirmed interpretations of the spec: **Field Labor IS re-estimated** with the
+same LRC factor (business Q1); the **single LRC factor + USD rate per
+(location, period) applies to all three labor categories** (no labor-type code
+in LRC); the engine's inputs are the un-prefixed `*_ORIG` cost-table columns -
+the `DB_*` twins are databook reference, display-only (business Q11); a line
+with **no MFC code** gets updated material cost **0** (business Q12), while a
+code with **no factor** for the selection keeps its cost (factor 1.0) and is
+flagged (business Q3). See [CLAUDE.md](CLAUDE.md) for the full assumptions
+log.
 
 ## Tests / lint
 
 ```bash
-DATA_SOURCE=mock pytest -q    # 39 tests, ~95% coverage
+DATA_SOURCE=mock pytest -q    # 76 tests, ~97% coverage
 ruff check .
 ```
 
