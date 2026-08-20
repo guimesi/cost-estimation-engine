@@ -3,7 +3,7 @@
 The ``src`` layer is deliberately UI-free (engine/repo import no Streamlit), so
 the per-session data cache lives here instead. These thin wrappers add
 ``st.cache_data`` so reruns and repeated clicks don't re-read the same ADR /
-EMMA data - in ``snowflake`` mode that means one query per distinct argument
+EMMA data - in ``databricks`` mode that means one query per distinct argument
 instead of one per interaction. Cache is keyed on the function args.
 
 If the process switches data source mid-session (it doesn't in normal use),

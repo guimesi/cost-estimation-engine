@@ -5,24 +5,29 @@ The README is for humans; this file is the working map.
 
 ## What this app is
 
-The **Cost Estimation Engine** - a Streamlit + Snowflake app that re-estimates
+The **Cost Estimation Engine** - a Streamlit + Databricks app that re-estimates
 an existing **ADR** project estimate for a user-chosen **Location** + **Time
 Period** by applying **EMMA** market factors (MFC for materials, LRC for
 labor), then shows an original-vs-updated comparison and exports a CSV.
 
 It was bootstrapped from the sibling [`data-quality-app`](../data-quality-app)
-and reuses that foundation: the Snowflake client, env-driven settings,
-`mock`/`snowflake` switch, one global theme, session/router plumbing, and the
-pytest + ruff + CI harness.
+and reuses that foundation: the warehouse client, env-driven settings,
+`mock`/`databricks` switch, one global theme, session/router plumbing, and the
+pytest + ruff + CI harness. It deploys as a **Databricks App** (headless: the
+app's service principal authenticates via `databricks.sdk.core.Config`; there
+is no browser-based auth anywhere). The former Snowflake tables were migrated
+1:1 (same names) into Unity Catalog under
+`entai_sandbox_catalog.data_quality_scorecards` (override via
+`DATABRICKS_CATALOG` / `DATABRICKS_SCHEMA`); see `deploy/README.md`.
 
 Two data-source modes via `DATA_SOURCE`:
 - `mock` (default): deterministic synthetic ADR + EMMA from `src/mock_data.py`.
-- `snowflake`: real reads through `src/snowflake_client.py`.
+- `databricks`: real reads through `src/databricks_client.py` (SQL Warehouse).
 
-EMMA has its **own** source knob, `EMMA_SOURCE` (`mock`/`excel`/`snowflake`,
-defaults to `DATA_SOURCE`), so ADR can come from Snowflake while the MFC/LRC
+EMMA has its **own** source knob, `EMMA_SOURCE` (`mock`/`excel`/`databricks`,
+defaults to `DATA_SOURCE`), so ADR can come from Databricks while the MFC/LRC
 factors are read from local Excel workbooks - the interim setup until those
-tables land in Snowflake. With `EMMA_SOURCE=excel`, drop the two workbooks in
+tables land in Unity Catalog. With `EMMA_SOURCE=excel`, drop the two workbooks in
 `EMMA_DIR` (default `data/`); `src/emma_excel.py` loads them.
 
 > **Heads-up - the EMMA files are named inverted vs. the spec.** The doc calls
@@ -71,18 +76,20 @@ shows all-todo when `current_step` isn't in `STEPS`.
 
 ```
 app.py                         # router (current_step -> renderer)
+app.yaml                       # Databricks Apps runtime config (command + env)
+deploy/                        # Databricks Apps runbook + UC grants SQL
 config/
-  settings.py                  # env-driven Settings (DATA_SOURCE + Snowflake)
+  settings.py                  # env-driven Settings (DATA_SOURCE + Databricks)
   schema.py                    # SINGLE SOURCE for canonical column names,
                                #   ADR table names, COST/HOUR category tuples,
                                #   and raw->canonical EMMA rename maps
 src/
   models.py                    # ProjectRef / FactorSelection / Comparison /
                                #   EstimationResult
-  snowflake_client.py          # connector wrapper (fetch_table / fetch_query)
+  databricks_client.py         # SQL Warehouse wrapper (fetch_table / fetch_query)
   mock_data.py                 # deterministic ADR master -> 4 tables + EMMA
   adr_repository.py            # list_projects + load_project_lines; mock joins
-                               #   in memory, Snowflake aggregates + reads one
+                               #   in memory, Databricks aggregates + reads one
                                #   project's lines projected/filtered server-side
   emma_reference.py            # load_mfc/load_lrc, available_selections,
                                #   lrc_lookup, mfc_factor_map
@@ -141,8 +148,8 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    tables on shared keys (`ITEM_ID`, `SNAPSHOT_ID`, `PROJECT_ID`);
    `adr_repository._join_tables` reconstructs the canonical frame (mock path,
    which loads the whole small universe in memory).
-   The live Snowflake schema (reconciled in `adr_repository._sf_load_project_lines`
-   / `_sf_list_projects`, maps in `config/schema.py`, verified via
+   The live warehouse schema (reconciled in `adr_repository._dbx_load_project_lines`
+   / `_dbx_list_projects`, maps in `config/schema.py`, verified via
    `scripts/inspect_adr_schema.py`) is different and handled separately:
    - **Item join key is `ROW_ID`** (-> canonical `ITEM_ID`), not a composite.
    - **`ADR_DIM_ESTIMATEDESIGNDETAILS` is an EAV table** (one row per design
@@ -153,14 +160,14 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
      `SNAPSHOT_PRIORITY` (SCREEN < GATE1 < ... < GATE3); "latest snapshot" =
      highest-ranked gate per project, always auto-selected (business Q5,
      2026-06-19: Gate3 newest > Gate2 > Screen oldest; no per-gate user choice).
-     `ProjectRef.snapshot_id` is therefore `int | str` (gate label in Snowflake,
-     int in mock).
+     `ProjectRef.snapshot_id` is therefore `int | str` (gate label in the live
+     data, int in mock).
    - Some databook values arrive as **strings** ("0", "9.47") and are coerced.
-   - **Reads are pushed to Snowflake, not pulled whole** (the real base is ~800k
+   - **Reads are pushed to the warehouse, not pulled whole** (the real base is ~800k
      rows × dozens of columns): `list_projects` runs a `GROUP BY PLANVIEW_ID,
      SNAPSHOT` aggregation (one row per project×snapshot, no line items);
      `load_project_lines` reads only the chosen project's latest-snapshot rows,
-     **projected to the needed columns** (`SnowflakeClient.fetch_table(columns=)`
+     **projected to the needed columns** (`DatabricksClient.fetch_table(columns=)`
      = the rename-map keys) and filtered server-side (`WHERE PLANVIEW_ID=%s`;
      cost/qty have no project key so they're filtered by a `ROW_ID IN (subquery)`
      on the item table). The `ui/_data.py` `st.cache_data` layer then makes
@@ -204,7 +211,7 @@ TOTAL_COST_NEW  = VSF + SPEC + BM + FSF + FIELD_LABOR  (the 5 *_NEW costs)
    step-3 context caption/headers + the summary CSV (`ORIGINAL_PERIOD` /
    `NEW_LOCATION_PERIOD`); `COL_COST_BASIS` is carried per line (line-level CSV)
    only. `ProjectRef.original_period` surfaces the same period in steps 1-2
-   (Snowflake: `MODE(COST_UPDATE)` inside the `list_projects` aggregation; mock:
+   (Databricks: `MODE(COST_UPDATE)` inside the `list_projects` aggregation; mock:
    mode per group). Both canonical, mock derives them without consuming the RNG.
    Display only - no formula uses them.
 7. **`DB_*` columns are databook REFERENCE, not the engine's inputs** (business
@@ -262,9 +269,10 @@ CI runs `ruff check` then `pytest` with `DATA_SOURCE=mock`
 - **A new workflow step**: add to `STEPS`/`STEP_LABELS` in
   `utils/session/state.py`, create `ui/step_*.py` with a `render()`, wire it
   into `STEP_RENDERERS` in `app.py`.
-- **Wiring real Snowflake**: fill the raw→canonical maps in `config/schema.py`
+- **Wiring real Databricks**: fill the raw→canonical maps in `config/schema.py`
   and verify the ADR table projections / join keys in `adr_repository` against
-  the real schema. The engine and UI don't change.
+  the real schema (tables live in Unity Catalog, names identical to the old
+  Snowflake ones). The engine and UI don't change. Deploy steps: `deploy/README.md`.
 
 ## Friction points
 
@@ -284,7 +292,7 @@ CI runs `ruff check` then `pytest` with `DATA_SOURCE=mock`
   tables are projections of one master, so the join always reconstructs the
   same rows. Don't introduce `Math.random`-style nondeterminism or per-call
   rebuilds.
-- **`SnowflakeClient._resolve_location` reads `SETTINGS` directly** (no domain
+- **`databricks_client._resolve_location` reads `SETTINGS` directly** (no domain
   registry here, unlike the sibling app). If CEE grows domains, reintroduce a
   domain-preferring resolver.
 ```

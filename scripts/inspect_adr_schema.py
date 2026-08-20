@@ -1,7 +1,7 @@
-"""Dump the real column names of the 4 ADR Snowflake tables.
+"""Dump the real column names of the 4 ADR tables in Unity Catalog.
 
-Run this with your Snowflake env configured (DATA_SOURCE=snowflake and the
-SNOWFLAKE_* vars in .env) to discover the actual ITPlus column names. Paste the
+Run this with your Databricks env configured (DATA_SOURCE=databricks and the
+DATABRICKS_* vars in .env) to discover the actual ITPlus column names. Paste the
 output back so the raw->canonical ADR rename maps can be filled in
 ``config/schema.py`` and the join keys verified in ``src/adr_repository.py``.
 
@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.schema import ADR_TABLES  # noqa: E402
-from src.snowflake_client import get_shared_client  # noqa: E402
+from src.databricks_client import get_shared_client  # noqa: E402
 
 
 def main() -> None:

@@ -3,7 +3,7 @@
 Joins the 4 ADR source tables into one canonical per-item frame and selects
 the latest snapshot per project (the doc: "the latest snapshot available for
 that project"). Branches on ``SETTINGS.is_mock`` so the same join logic runs
-against mock frames or real Snowflake reads - only the fetcher changes.
+against mock frames or real Databricks reads - only the fetcher changes.
 """
 from __future__ import annotations
 
@@ -69,9 +69,9 @@ def _join_tables(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """Join the 4 (mock) ADR tables on ``(ITEM_ID, SNAPSHOT_ID)`` into one frame.
 
     Used for the mock source, whose tables are wide canonical projections of a
-    single master. The real Snowflake schema is reconciled in
-    :func:`_snowflake_lines` instead (different column layout + an EAV design
-    table that must not be joined).
+    single master. The real ADR schema is reconciled in
+    :func:`_dbx_load_project_lines` instead (different column layout + an EAV
+    design table that must not be joined).
     """
     items = tables[TBL_ITEM_RECORD]
     design = tables[TBL_DESIGN_DETAILS]
@@ -85,21 +85,21 @@ def _join_tables(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 
 # Raw columns to project per ADR table = the keys of each rename map (exactly the
-# columns the engine/UI need). Pushing the projection to Snowflake means a narrow
-# read instead of SELECT * across dozens of columns.
+# columns the engine/UI need). Pushing the projection to the warehouse means a
+# narrow read instead of SELECT * across dozens of columns.
 _ITEM_RAW_COLS = list(ADR_ITEM_RECORD_RENAME)
 _COST_RAW_COLS = list(ADR_COST_RESULTS_RENAME)
 _QTY_RAW_COLS = list(ADR_QTY_RESULTS_RENAME)
 
 
-def _sf_list_projects() -> List[ProjectRef]:
-    """Snowflake path: list projects via a server-side aggregation.
+def _dbx_list_projects() -> List[ProjectRef]:
+    """Databricks path: list projects via a server-side aggregation.
 
     Only the item table is touched, and only as a ``GROUP BY`` - one row per
     (project, snapshot) instead of transferring every line item. The latest
     snapshot per project is then picked locally on that small frame.
     """
-    from src.snowflake_client import get_shared_client
+    from src.databricks_client import get_shared_client
 
     client = get_shared_client()
     item_t = client.qualified(TBL_ITEM_RECORD)
@@ -121,16 +121,17 @@ def _sf_list_projects() -> List[ProjectRef]:
     return _projects_from_snapshot_counts(agg)
 
 
-def _sf_load_project_lines(project_id: str) -> pd.DataFrame:
-    """Snowflake path: load ONE project's latest-snapshot lines, projected.
+def _dbx_load_project_lines(project_id: str) -> pd.DataFrame:
+    """Databricks path: load ONE project's latest-snapshot lines, projected.
 
-    Pushes the project filter to Snowflake instead of pulling the whole table:
-    finds the project's latest snapshot, then reads only the needed columns for
-    its rows. Cost/qty carry no project key, so they are filtered by the
-    matching ``ROW_ID``s via a subquery on the item table. Joins on ``ROW_ID``
-    (-> ``ITEM_ID``); the EAV design-details table is intentionally skipped.
+    Pushes the project filter to the warehouse instead of pulling the whole
+    table: finds the project's latest snapshot, then reads only the needed
+    columns for its rows. Cost/qty carry no project key, so they are filtered
+    by the matching ``ROW_ID``s via a subquery on the item table. Joins on
+    ``ROW_ID`` (-> ``ITEM_ID``); the EAV design-details table is intentionally
+    skipped.
     """
-    from src.snowflake_client import get_shared_client
+    from src.databricks_client import get_shared_client
 
     client = get_shared_client()
     item_t = client.qualified(TBL_ITEM_RECORD)
@@ -297,20 +298,20 @@ def _projects_from_snapshot_counts(agg: pd.DataFrame) -> List[ProjectRef]:
 def list_projects() -> List[ProjectRef]:
     """Return every project that has ADR estimations, at its latest snapshot.
 
-    Mock loads the whole (small) universe; Snowflake aggregates server-side so
-    the listing never transfers line items.
+    Mock loads the whole (small) universe; Databricks aggregates server-side
+    so the listing never transfers line items.
     """
     if SETTINGS.is_mock:
         return _projects_from_mock_frame(_latest_snapshot_per_project(_mock_lines()))
-    return _sf_list_projects()
+    return _dbx_list_projects()
 
 
 def load_project_lines(project_id: str) -> pd.DataFrame:
     """Return the canonical line-item frame for a project's latest snapshot.
 
-    Raises ``KeyError`` if the project has no ADR estimations loaded. Snowflake
-    reads only this project's rows (projected + filtered); mock filters the
-    in-memory universe.
+    Raises ``KeyError`` if the project has no ADR estimations loaded.
+    Databricks reads only this project's rows (projected + filtered); mock
+    filters the in-memory universe.
     """
     if SETTINGS.is_mock:
         joined = _latest_snapshot_per_project(_mock_lines())
@@ -318,4 +319,4 @@ def load_project_lines(project_id: str) -> pd.DataFrame:
         if lines.empty:
             raise KeyError(f"No ADR estimations loaded for project {project_id!r}")
         return lines
-    return _sf_load_project_lines(project_id)
+    return _dbx_load_project_lines(project_id)

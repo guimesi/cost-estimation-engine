@@ -1,0 +1,37 @@
+# Databricks Apps runtime configuration.
+#
+# The platform builds the app container from this repo (installing
+# requirements.txt) and runs the command below. Identity is the app's
+# service principal: Databricks Apps injects DATABRICKS_HOST +
+# DATABRICKS_CLIENT_ID/SECRET into the environment and
+# databricks.sdk.core.Config picks them up - no browser auth, no
+# credentials in this file.
+#
+# REQUIRED app resource: attach a SQL Warehouse to the app (resource key
+# "sql-warehouse" below, permission CAN_USE). The valueFrom entry maps the
+# attached warehouse's id into DATABRICKS_WAREHOUSE_ID, which the data
+# layer turns into /sql/1.0/warehouses/<id>.
+command: ["streamlit", "run", "app.py"]
+
+env:
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"
+  # Read real ADR data from Unity Catalog (mock mode is for local demos).
+  - name: DATA_SOURCE
+    value: "databricks"
+  # EMMA (MFC/LRC) factors. "databricks" expects MFC / LRC tables in the same
+  # Unity Catalog namespace (see deploy/README.md for loading them from the
+  # Excel exports). Until those tables exist, switch to "excel" and ship the
+  # two workbooks in EMMA_DIR with the deployed source - note that data/*.xlsx
+  # is gitignored, so a plain repo deploy will NOT carry them.
+  - name: EMMA_SOURCE
+    value: "databricks"
+  # Unity Catalog namespace holding the migrated tables. These match the
+  # in-code defaults; override here if the tables move.
+  - name: DATABRICKS_CATALOG
+    value: "entai_sandbox_catalog"
+  - name: DATABRICKS_SCHEMA
+    value: "data_quality_scorecards"
+  # SQL Warehouse attached as an app resource (see header note).
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: "sql-warehouse"

@@ -1,25 +1,26 @@
 # Cost Estimation Engine
 
-A Streamlit + Snowflake app that re-estimates an existing ADR project estimate
+A Streamlit + Databricks app that re-estimates an existing ADR project estimate
 for a user-selected **Location** and **Time Period** by applying EMMA market
 factors (MFC for materials, LRC for labor), then shows an original-vs-updated
 comparison and exports a CSV.
 
 It shares its foundation with the sibling
-[`data-quality-app`](../data-quality-app): the same Snowflake client,
-env-driven settings, `mock`/`snowflake` data-source switch, global theme,
-session/router plumbing, and pytest + ruff + CI harness.
+[`data-quality-app`](../data-quality-app): the same Databricks client,
+env-driven settings, `mock`/`databricks` data-source switch, global theme,
+session/router plumbing, and pytest + ruff + CI harness. It deploys as a
+**Databricks App** (see [deploy/README.md](deploy/README.md)).
 
 ## Quick start
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env          # only needed for snowflake mode
+cp .env.example .env          # only needed for databricks mode
 streamlit run app.py          # or: make run
 ```
 
 Default `DATA_SOURCE=mock` ships deterministic synthetic ADR + EMMA data, so
-the full 3-step flow works with no Snowflake connection.
+the full 3-step flow works with no warehouse connection.
 
 ## The flow
 
@@ -67,11 +68,11 @@ CI ([.github/workflows/tests.yml](.github/workflows/tests.yml)) runs both with
 ```
 app.py                       # Streamlit router (current_step -> renderer)
 config/
-  settings.py                # env-driven Settings (DATA_SOURCE + Snowflake)
+  settings.py                # env-driven Settings (DATA_SOURCE + Databricks)
   schema.py                  # canonical column names, ADR table names, categories
 src/
   models.py                  # ProjectRef / FactorSelection / Comparison / EstimationResult
-  snowflake_client.py        # connector wrapper (fetch_table / fetch_query + shared client)
+  databricks_client.py       # SQL Warehouse wrapper (fetch_table / fetch_query + shared client)
   mock_data.py               # deterministic ADR 4-table + EMMA MFC/LRC
   adr_repository.py          # list projects + join 4 ADR tables (latest snapshot)
   emma_reference.py          # MFC/LRC load + selections + factor lookups
@@ -86,14 +87,20 @@ utils/
   colors.py / helpers.py     # status hexes + money/hours/% formatting
   session_state.py           # slim re-export shim over utils/session/*
   session/                   # state / navigation / sidebar
-tests/                       # engine, emma, adr, csv, mock, helpers, snowflake, AppTest
+tests/                       # engine, emma, adr, csv, mock, helpers, databricks, AppTest
 ```
 
-## Snowflake mode
+## Databricks mode
 
 `adr_repository` and `emma_reference` branch on `SETTINGS.is_mock`. The
-Snowflake path is wired (it reads the 4 ADR tables and the MFC/LRC references
-through the shared client) but the exact source column names are placeholders -
-reconcile the raw→canonical maps in [config/schema.py](config/schema.py)
-(`MFC_RAW_RENAME` / `LRC_RAW_RENAME`) and the ADR table projections against the
-real schema. The calculation engine never changes.
+Databricks path reads the ADR tables (and, once landed, the MFC/LRC reference
+tables) from Unity Catalog - default namespace
+`entai_sandbox_catalog.data_quality_scorecards`, table names identical to the
+Snowflake originals - through a SQL Warehouse. Identity is resolved headlessly
+by `databricks.sdk.core.Config`: the app service principal inside Databricks
+Apps, or `DATABRICKS_HOST` + `DATABRICKS_TOKEN` locally (no browser auth). The
+raw->canonical maps live in [config/schema.py](config/schema.py); the
+calculation engine never changes.
+
+Deploying to Databricks Apps (app creation, warehouse resource, Unity Catalog
+grants) is documented in [deploy/README.md](deploy/README.md).

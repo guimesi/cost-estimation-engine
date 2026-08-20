@@ -7,7 +7,7 @@ EMMA's costUpdateReportingPeriod). This prints the distinct values of both
 columns (overall top counts + per-project samples) so we can pin the real
 semantics and label the original-estimation context correctly.
 
-    DATA_SOURCE=snowflake python scripts/inspect_cost_basis.py
+    DATA_SOURCE=databricks python scripts/inspect_cost_basis.py
 
 Read-only.
 """
@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.schema import TBL_ITEM_RECORD  # noqa: E402
-from src.snowflake_client import get_shared_client  # noqa: E402
+from src.databricks_client import get_shared_client  # noqa: E402
 
 _COLS = ["COST_BASIS", "COST_UPDATE"]
 

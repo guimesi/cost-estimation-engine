@@ -19,7 +19,7 @@ class ProjectRef:
 
     project_id: str
     project_name: str
-    # Stage-gate label from Snowflake (e.g. "GATE3") or an integer in mock mode.
+    # Stage-gate label from the live ADR data (e.g. "GATE3") or an integer in mock mode.
     snapshot_id: Union[int, str]
     n_items: int
     # When the original estimate was priced (ADR COST_UPDATE, e.g. "2Q2019").

@@ -2,7 +2,7 @@
 
 Builds a small but realistic ADR estimate dataset (the 4 source tables) plus
 the EMMA reference data (MFC material factors and LRC labor factors), so the
-whole app runs end-to-end with no Snowflake connection.
+whole app runs end-to-end with no warehouse connection.
 
 Determinism contract (carried over from the sibling data-quality-app): every
 frame is built ONCE at import with a dedicated, fixed-seed RNG and fixed

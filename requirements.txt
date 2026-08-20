@@ -1,7 +1,13 @@
+# Application dependencies (PyPI). Used by local development, CI and the
+# Databricks Apps runtime (Apps installs requirements.txt from the repo root
+# into its container).
 streamlit>=1.32.0,<2.0
 pandas>=2.0.0,<3.0
 numpy>=1.24.0,<3.0
-snowflake-connector-python>=3.6.0,<5.0
+# Databricks SQL Warehouse access (Arrow fetch path) + unified headless auth
+# (app service principal in Databricks Apps, PAT locally).
+databricks-sql-connector>=3.7.0,<5.0
+databricks-sdk>=0.30.0,<1.0
 openpyxl>=3.1.0,<4.0
 plotly>=5.18.0,<7.0
 python-dotenv>=1.0.0,<2.0

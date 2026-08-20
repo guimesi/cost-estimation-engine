@@ -5,11 +5,11 @@ business doc uses inconsistent column labels across its calculation tables
 (``DB_SPEC_S_C`` vs ``DB_SPEC_H``, ``FL_C`` for both field-labor hours and
 cost, etc.); this module pins ONE canonical name per concept so the engine,
 repository, mock data and UI never drift. The mapping from the real
-Snowflake / Excel column names to these canonical names lives in
+Databricks / Excel column names to these canonical names lives in
 :mod:`src.adr_repository` (ADR) and :mod:`src.emma_reference` (EMMA), so a
 schema reconciliation is a one-file edit.
 
-Naming convention (uppercase, Snowflake style):
+Naming convention (uppercase, warehouse style):
 - ``*_ORIG`` -> original-estimate values from ADR (the engine's inputs and the
   "Original" side of every comparison). In the real cost table these are the
   columns WITHOUT the ``DB_`` prefix (``SPEC_S_C_COST`` etc.) - business
@@ -23,7 +23,7 @@ from __future__ import annotations
 from collections import namedtuple
 
 # =============================================================================
-# ADR source tables (Snowflake)
+# ADR source tables (Unity Catalog; names match the Snowflake originals)
 # =============================================================================
 TBL_ITEM_RECORD = "ADR_DIM_ESTIMATEITEMRECORD"
 TBL_DESIGN_DETAILS = "ADR_DIM_ESTIMATEDESIGNDETAILS"
@@ -150,7 +150,7 @@ LRC_FACTOR_MULTIPLIER = "LRC_FACTOR_MULTIPLIER"
 LRC_PERIOD = "LRC_PERIOD"
 LRC_TOTAL_USD_RATE = "LRC_TOTAL_USD_RATE"
 
-# Raw -> canonical column rename maps for Snowflake / Excel ingestion. The
+# Raw -> canonical column rename maps for Databricks / Excel ingestion. The
 # doc's MFC.xlsx / LRC.xlsx headers map onto the canonical names above.
 MFC_RAW_RENAME = {
     "MFC_LOCATION": MFC_LOCATION,
@@ -169,11 +169,11 @@ LRC_RAW_RENAME = {
 }
 
 # =============================================================================
-# ADR raw -> canonical column maps (real Snowflake / ITPlus headers)
+# ADR raw -> canonical column maps (real ITPlus headers)
 # =============================================================================
 # The 4 ADR tables ship the real ITPlus column names (uppercased by the
 # client). These maps reconcile them onto the canonical names above; applied
-# per table in :func:`src.adr_repository._snowflake_lines`. Reconciled against
+# per table in :func:`src.adr_repository._dbx_load_project_lines`. Reconciled against
 # the live schema (see scripts/inspect_adr_schema.py).
 #
 # Notes:

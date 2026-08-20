@@ -1,7 +1,8 @@
 """Shared pytest fixtures.
 
 Mirrors the Data Quality app: an autouse fixture pins the data source to
-``mock`` regardless of the shell ``DATA_SOURCE`` so tests never hit Snowflake.
+``mock`` regardless of the shell ``DATA_SOURCE`` so tests never hit
+Databricks.
 """
 from __future__ import annotations
 
@@ -21,5 +22,5 @@ def _force_mock_data_source(monkeypatch):
     """
     mock_settings = dataclasses.replace(SETTINGS, data_source="mock", emma_source="mock")
     monkeypatch.setattr("config.settings.SETTINGS", mock_settings)
-    monkeypatch.setattr("src.snowflake_client.SETTINGS", mock_settings)
+    monkeypatch.setattr("src.databricks_client.SETTINGS", mock_settings)
     yield

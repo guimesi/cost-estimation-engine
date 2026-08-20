@@ -15,4 +15,4 @@ def test_settings_is_frozen():
 
     s = Settings()
     with pytest.raises(Exception):
-        s.data_source = "snowflake"  # type: ignore[misc]
+        s.data_source = "databricks"  # type: ignore[misc]

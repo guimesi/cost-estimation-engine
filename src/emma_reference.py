@@ -1,6 +1,6 @@
 """EMMA reference data: MFC (material) and LRC (labor) factor lookups.
 
-Loads the two EMMA reference frames (mock or Snowflake), exposes the set of
+Loads the two EMMA reference frames (mock, Excel or Databricks), exposes the set of
 (Location, Period) selections the user can pick, and provides fast lookups the
 engine uses:
 
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# Loading (mock vs Snowflake)
+# Loading (mock vs Excel vs Databricks)
 # =============================================================================
 def load_mfc() -> pd.DataFrame:
     """Load the MFC (material) reference frame with canonical columns."""
@@ -50,7 +50,7 @@ def load_mfc() -> pd.DataFrame:
         from src.emma_excel import load_excel_mfc
 
         return load_excel_mfc()
-    return _load_snowflake_reference("MFC", MFC_RAW_RENAME)
+    return _load_databricks_reference("MFC", MFC_RAW_RENAME)
 
 
 def load_lrc() -> pd.DataFrame:
@@ -63,20 +63,21 @@ def load_lrc() -> pd.DataFrame:
         from src.emma_excel import load_excel_lrc
 
         return load_excel_lrc()
-    return _load_snowflake_reference("LRC", LRC_RAW_RENAME)
+    return _load_databricks_reference("LRC", LRC_RAW_RENAME)
 
 
-def _load_snowflake_reference(table: str, rename: Dict[str, str]) -> pd.DataFrame:
-    """Fetch an EMMA reference table from Snowflake and canonicalize columns.
+def _load_databricks_reference(table: str, rename: Dict[str, str]) -> pd.DataFrame:
+    """Fetch an EMMA reference table from Databricks and canonicalize columns.
 
-    The doc ships EMMA as ``MFC.xlsx`` / ``LRC.xlsx``; in a Snowflake
-    deployment they are expected as tables with the same headers (uppercased
-    by the client). Reconcile the raw->canonical map in ``config.schema`` if
-    the real headers differ.
+    The doc ships EMMA as ``MFC.xlsx`` / ``LRC.xlsx``; once they land in Unity
+    Catalog they are expected as tables with the same headers (uppercased by
+    the client). Reconcile the raw->canonical map in ``config.schema`` if the
+    real headers differ.
     """
-    from src.snowflake_client import get_shared_client
+    from src.databricks_client import get_shared_client
 
-    df = get_shared_client().fetch_query(f"SELECT * FROM {table}")
+    client = get_shared_client()
+    df = client.fetch_query(f"SELECT * FROM {client.qualified(table)}")  # nosec B608 - table name is an internal constant
     df = df.rename(columns={k.upper(): v for k, v in rename.items()})
     return df
 

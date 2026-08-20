@@ -2,7 +2,7 @@
 
 Business Q6 ("multiple ADRs or splits per project") needs data to decide whether
 to keep aggregating ALL items at the latest snapshot or to pick a single
-ADR/split. Run this against Snowflake (DATA_SOURCE=snowflake + the SNOWFLAKE_*
+ADR/split. Run this against Databricks (DATA_SOURCE=databricks + the DATABRICKS_*
 vars in .env) and paste the output back.
 
 For EACH candidate id column (EXECUTION_SPLIT, ADR_ID, ...) it reports how many
@@ -31,7 +31,7 @@ from src.adr_repository import (  # noqa: E402  (reuse internals for a diagnosti
     _sf_load_project_lines,
     _snapshot_rank,
 )
-from src.snowflake_client import get_shared_client  # noqa: E402
+from src.databricks_client import get_shared_client  # noqa: E402
 
 _COST_COLS = [c.orig_col for c in COST_CATEGORIES]  # canonical databook cost columns
 

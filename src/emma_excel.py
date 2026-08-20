@@ -1,8 +1,8 @@
 """Load EMMA reference frames (MFC / LRC) from local Excel files.
 
-Interim source until the MFC/LRC tables land in Snowflake: drop the two EMMA
+Interim source until the MFC/LRC tables land in Unity Catalog: drop the two EMMA
 workbooks in ``SETTINGS.emma_dir`` (default ``data/``) and run with
-``EMMA_SOURCE=excel``. ADR can still come from Snowflake at the same time.
+``EMMA_SOURCE=excel``. ADR can still come from Databricks at the same time.
 
 **Routing is by column structure, not by filename.** The business doc and the
 real-world exports disagree on which workbook is named ``MFC.xlsx`` vs

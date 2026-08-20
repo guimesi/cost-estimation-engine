@@ -9,7 +9,7 @@ reference frames and reports, by (Location, Period):
 
 Run with the SAME EMMA config the app uses, e.g.:
     EMMA_SOURCE=excel  EMMA_DIR=data  python scripts/inspect_labor_only.py
-    DATA_SOURCE=snowflake EMMA_SOURCE=snowflake python scripts/inspect_labor_only.py
+    DATA_SOURCE=databricks EMMA_SOURCE=databricks python scripts/inspect_labor_only.py
 
 Read-only.
 """

@@ -50,7 +50,7 @@ def test_load_unknown_project_raises():
 
 
 # ---------------------------------------------------------------------------
-# Snowflake reconciliation: real ITPlus column names -> canonical line frame.
+# Databricks reconciliation: real ITPlus column names -> canonical line frame.
 # ---------------------------------------------------------------------------
 def _raw_item_record() -> pd.DataFrame:
     # Two planview projects; PV1 has both SCREEN and GATE3 snapshots.
@@ -110,7 +110,7 @@ def _raw_qty_results() -> pd.DataFrame:
 
 
 class _FakeClient:
-    """Emulates the slice of Snowflake the repository now relies on.
+    """Emulates the slice of the warehouse the repository now relies on.
 
     The new path pushes work to SQL: an aggregation to list projects, a distinct
     query for a project's snapshots, and projected + filtered table reads. The
@@ -130,7 +130,7 @@ class _FakeClient:
 
     def fetch_query(self, sql, params=None):
         item = self._BY_TABLE[TBL_ITEM_RECORD]()
-        if "GROUP BY" in sql:  # _sf_list_projects aggregation
+        if "GROUP BY" in sql:  # _dbx_list_projects aggregation
             return (
                 item.groupby(["PLANVIEW_ID", "SNAPSHOT"], as_index=False)
                 .agg(
@@ -159,15 +159,15 @@ class _FakeClient:
 
 
 @pytest.fixture
-def _snowflake(monkeypatch):
-    import src.snowflake_client as sc
+def _databricks(monkeypatch):
+    import src.databricks_client as dbc
 
-    sf_settings = dataclasses.replace(SETTINGS, data_source="snowflake")
-    monkeypatch.setattr("src.adr_repository.SETTINGS", sf_settings)
-    monkeypatch.setattr(sc, "get_shared_client", lambda: _FakeClient())
+    dbx_settings = dataclasses.replace(SETTINGS, data_source="databricks")
+    monkeypatch.setattr("src.adr_repository.SETTINGS", dbx_settings)
+    monkeypatch.setattr(dbc, "get_shared_client", lambda: _FakeClient())
 
 
-def test_snowflake_reconciles_canonical_columns(_snowflake):
+def test_databricks_reconciles_canonical_columns(_databricks):
     # Loading one project projects + reconciles the raw ITPlus columns.
     lines = repo.load_project_lines("PV1")
     for col in (*ADR_LINE_NUMERIC_COLUMNS, COL_BASE_MATERIAL_MFC, COL_VENDOR_SHOP_FAB_MFC):
@@ -181,7 +181,7 @@ def test_snowflake_reconciles_canonical_columns(_snowflake):
     assert lines[COL_DB_SPEC_H].iloc[0] == 10.0
 
 
-def test_snowflake_latest_snapshot_uses_gate_priority(_snowflake):
+def test_databricks_latest_snapshot_uses_gate_priority(_databricks):
     projects = {p.project_id: p for p in repo.list_projects()}
     # PV1 had SCREEN + GATE3 -> GATE3 wins; PV2 only GATE2.
     assert projects["PV1"].snapshot_id == "GATE3"

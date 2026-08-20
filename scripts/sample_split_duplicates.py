@@ -10,7 +10,7 @@ differ (distinct items sharing a generic name).
     python scripts/sample_split_duplicates.py            # 1101168
     python scripts/sample_split_duplicates.py 1089342    # another project
 
-Run with DATA_SOURCE=snowflake + SNOWFLAKE_* in .env. Read-only.
+Run with DATA_SOURCE=databricks + DATABRICKS_* in .env. Read-only.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.schema import COL_ITEM_ID, COST_CATEGORIES, TBL_ITEM_RECORD  # noqa: E402
 from src.adr_repository import _sf_load_project_lines, _snapshot_rank  # noqa: E402
-from src.snowflake_client import get_shared_client  # noqa: E402
+from src.databricks_client import get_shared_client  # noqa: E402
 
 _COST_COLS = [c.orig_col for c in COST_CATEGORIES]
 
