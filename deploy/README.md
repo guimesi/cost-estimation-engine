@@ -24,13 +24,13 @@ in `app.yaml` or `.env`); the values above are the in-code defaults.
 EMMA factors (`EMMA_SOURCE` in `app.yaml`):
 
 - `databricks` (default in `app.yaml`): expects `MFC` and `LRC` tables in the
-  same namespace, with the raw Excel headers as columns (`code`,
-  `locationCode`, `factorValue`, `costUpdateReportingPeriod_name`, ... - see
-  the rename maps in `config/schema.py`). Load them once from the two EMMA
-  Excel exports (e.g. via the Databricks UI "Create table" upload or a small
-  notebook). Remember the doc-vs-data filename inversion: route by CONTENT
-  (the workbook with a `code` column is Material/MFC; the one with
-  `factorMultiplier` + `totalUSDRate` is Labor/LRC).
+  same namespace (case-insensitive - `mfc`/`lrc` work). Load them once from
+  the two EMMA Excel exports as-is (e.g. via the Databricks UI "Create table"
+  upload or a small notebook): the loader normalizes the headers (Excel-style
+  `code`/`factorMultiplier` or prefixed `MFC_*`/`LRC_*`) and classifies each
+  table by its COLUMNS, not its name - so the known doc-vs-data content
+  inversion between the two files (business Q8) is handled automatically,
+  exactly like the Excel path.
 - `excel`: reads `data/*.xlsx` from the deployed source instead. Caveat:
   `data/*.xlsx` is **gitignored**, so a plain repo/sync deploy will not carry
   the workbooks - you would need to add them to the synced source explicitly.

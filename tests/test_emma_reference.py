@@ -42,8 +42,10 @@ def test_mfc_factor_map():
     assert all(v > 0 for v in fmap.values())
 
 
-def test_databricks_load_path(monkeypatch):
-    """The non-mock branch renames raw columns and fetches via the client."""
+def test_databricks_load_path_routes_by_content(monkeypatch):
+    """The non-mock branch reads both tables, fully qualified, and routes each
+    by its COLUMNS (business Q8) - here the contents are deliberately crossed
+    (the table named MFC holds the labor columns) and still land correctly."""
     import dataclasses
 
     import src.databricks_client as dbc
@@ -53,22 +55,35 @@ def test_databricks_load_path(monkeypatch):
     )
     monkeypatch.setattr("src.emma_reference.SETTINGS", dbx_settings)
 
-    raw = pd.DataFrame({"MFC_CODE": ["C1"], "MFC_LOCATIONCODE": ["X"],
-                        "MFC_FACTORVALUE": [1.2], "MFC_COSTUPDATEREPORTINGPERIOD_NAME": ["P1"],
-                        "MFC_LOCATION": ["Loc"], "MFC_DESCRIPTION": ["d"]})
+    material_raw = pd.DataFrame(
+        {"code": ["C1"], "locationCode": ["X"], "factorValue": [1.2],
+         "costUpdateReportingPeriod_name": ["P1"], "location": ["Loc"],
+         "description": ["d"]}
+    )
+    labor_raw = pd.DataFrame(
+        {"location": ["Loc"], "locationCode": ["X"], "factorMultiplier": [1.1],
+         "totalUSDRate": [50.0], "costUpdateReportingPeriod_name": ["P1"]}
+    )
 
     class _Client:
         def qualified(self, table):
             return f"CAT.SCH.{table}"
 
         def fetch_query(self, sql):
-            assert "CAT.SCH.MFC" in sql  # reads are fully qualified
-            return raw
+            assert "CAT.SCH." in sql  # reads are fully qualified
+            return labor_raw if "CAT.SCH.MFC" in sql else material_raw
 
     monkeypatch.setattr(dbc, "get_shared_client", lambda: _Client())
-    df = emma.load_mfc()
-    assert MFC_CODE in df.columns and MFC_FACTOR_VALUE in df.columns
-    assert df.iloc[0][MFC_FACTOR_VALUE] == 1.2
+    emma._load_databricks_pair.cache_clear()
+    try:
+        mfc = emma.load_mfc()
+        lrc = emma.load_lrc()
+    finally:
+        emma._load_databricks_pair.cache_clear()
+    assert MFC_CODE in mfc.columns and MFC_FACTOR_VALUE in mfc.columns
+    assert mfc.iloc[0][MFC_FACTOR_VALUE] == 1.2
+    assert lrc.iloc[0][LRC_FACTOR_MULTIPLIER] == 1.1
+    assert lrc.iloc[0][LRC_TOTAL_USD_RATE] == 50.0
 
 
 def test_available_selections_accepts_injected_frames():

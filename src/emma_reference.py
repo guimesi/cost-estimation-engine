@@ -14,6 +14,7 @@ engine uses:
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -23,13 +24,11 @@ from config.schema import (
     LRC_LOCATION,
     LRC_LOCATION_CODE,
     LRC_PERIOD,
-    LRC_RAW_RENAME,
     LRC_TOTAL_USD_RATE,
     MFC_CODE,
     MFC_FACTOR_VALUE,
     MFC_LOCATION_CODE,
     MFC_PERIOD,
-    MFC_RAW_RENAME,
 )
 from config.settings import SETTINGS
 from src.models import FactorSelection
@@ -50,7 +49,7 @@ def load_mfc() -> pd.DataFrame:
         from src.emma_excel import load_excel_mfc
 
         return load_excel_mfc()
-    return _load_databricks_reference("MFC", MFC_RAW_RENAME)
+    return _load_databricks_pair()[0]
 
 
 def load_lrc() -> pd.DataFrame:
@@ -63,23 +62,48 @@ def load_lrc() -> pd.DataFrame:
         from src.emma_excel import load_excel_lrc
 
         return load_excel_lrc()
-    return _load_databricks_reference("LRC", LRC_RAW_RENAME)
+    return _load_databricks_pair()[1]
 
 
-def _load_databricks_reference(table: str, rename: Dict[str, str]) -> pd.DataFrame:
-    """Fetch an EMMA reference table from Databricks and canonicalize columns.
+@lru_cache(maxsize=1)
+def _load_databricks_pair() -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Fetch the MFC + LRC tables and return canonical ``(material, labor)``.
 
-    The doc ships EMMA as ``MFC.xlsx`` / ``LRC.xlsx``; once they land in Unity
-    Catalog they are expected as tables with the same headers (uppercased by
-    the client). Reconcile the raw->canonical map in ``config.schema`` if the
-    real headers differ.
+    The tables live in the app's Unity Catalog namespace under the names
+    ``MFC`` / ``LRC``, but - like the Excel exports they are loaded from -
+    their headers vary (Excel-style ``code``/``factorMultiplier`` vs
+    SQL-style ``MFC_CODE``) and the material/labor CONTENTS have been observed
+    crossed between the two names (business Q8: ignore names, route by
+    content). So both tables are read and each is classified by its columns,
+    then mapped onto the canonical frames with the same normalization the
+    Excel loader uses. Cached for the process lifetime, mirroring the Excel
+    loader; the ``ui/_data`` cache sits on top per session.
     """
     from src.databricks_client import get_shared_client
+    from src.emma_excel import classify_frame, to_labor_frame, to_material_frame
 
     client = get_shared_client()
-    df = client.fetch_query(f"SELECT * FROM {client.qualified(table)}")  # nosec B608 - table name is an internal constant
-    df = df.rename(columns={k.upper(): v for k, v in rename.items()})
-    return df
+    material: Optional[pd.DataFrame] = None
+    labor: Optional[pd.DataFrame] = None
+    for table in ("MFC", "LRC"):
+        df = client.fetch_query(f"SELECT * FROM {client.qualified(table)}")  # nosec B608 - table name is an internal constant
+        kind = classify_frame(df)
+        if kind == "material":
+            if material is not None:
+                raise ValueError(
+                    "Both EMMA tables are material-shaped (have a 'code' "
+                    "column); expected one material and one labor table."
+                )
+            material = to_material_frame(df)
+        else:
+            if labor is not None:
+                raise ValueError(
+                    "Both EMMA tables are labor-shaped (multiplier + USD "
+                    "rate); expected one material and one labor table."
+                )
+            labor = to_labor_frame(df)
+    assert material is not None and labor is not None  # one of each, by above
+    return material, labor
 
 
 # =============================================================================

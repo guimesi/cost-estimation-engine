@@ -19,6 +19,12 @@ This matches the engine math (material scales an existing cost per code; labor
 converts hours via ``multiplier x USD rate``) regardless of how the files are
 named. Headers are normalized (case/space/underscore-insensitive, optional
 ``MFC_``/``LRC_`` prefix stripped) so either naming convention loads cleanly.
+
+The classification + mapping helpers (:func:`classify_frame`,
+:func:`to_material_frame`, :func:`to_labor_frame`) are shared with the
+Databricks EMMA path (``emma_reference._load_databricks_pair``), which faces
+the exact same header/naming variability because its tables are loaded from
+these very exports.
 """
 from __future__ import annotations
 
@@ -66,7 +72,7 @@ def _pick(norms: Dict[str, str], *candidates: str) -> str:
     )
 
 
-def _classify(df: pd.DataFrame) -> str:
+def classify_frame(df: pd.DataFrame) -> str:
     """Return 'material' or 'labor' based on the workbook's column structure."""
     norms = {_norm(c): c for c in df.columns}
     if "code" in norms:
@@ -80,7 +86,7 @@ def _classify(df: pd.DataFrame) -> str:
     )
 
 
-def _to_material(df: pd.DataFrame) -> pd.DataFrame:
+def to_material_frame(df: pd.DataFrame) -> pd.DataFrame:
     """Map a material workbook onto canonical MFC_* columns; drop NaN factors."""
     norms = {_norm(c): c for c in df.columns}
     out = pd.DataFrame(
@@ -104,7 +110,7 @@ def _to_material(df: pd.DataFrame) -> pd.DataFrame:
     return out.dropna(subset=[MFC_FACTOR_VALUE]).reset_index(drop=True)
 
 
-def _to_labor(df: pd.DataFrame) -> pd.DataFrame:
+def to_labor_frame(df: pd.DataFrame) -> pd.DataFrame:
     """Map a labor workbook onto canonical LRC_* columns; drop NaN factor/rate."""
     norms = {_norm(c): c for c in df.columns}
     out = pd.DataFrame(
@@ -159,19 +165,19 @@ def _load_pair() -> Tuple[pd.DataFrame, pd.DataFrame]:
     labor: pd.DataFrame | None = None
     for path in _excel_paths():
         raw = pd.read_excel(path)
-        kind = _classify(raw)
+        kind = classify_frame(raw)
         if kind == "material":
             if material is not None:
                 raise ValueError(
                     "Found two material-shaped EMMA workbooks; expected exactly one."
                 )
-            material = _to_material(raw)
+            material = to_material_frame(raw)
         else:
             if labor is not None:
                 raise ValueError(
                     "Found two labor-shaped EMMA workbooks; expected exactly one."
                 )
-            labor = _to_labor(raw)
+            labor = to_labor_frame(raw)
     if material is None or labor is None:
         missing = "material (per-code)" if material is None else "labor (multiplier + USD rate)"
         raise ValueError(

@@ -150,23 +150,13 @@ LRC_FACTOR_MULTIPLIER = "LRC_FACTOR_MULTIPLIER"
 LRC_PERIOD = "LRC_PERIOD"
 LRC_TOTAL_USD_RATE = "LRC_TOTAL_USD_RATE"
 
-# Raw -> canonical column rename maps for Databricks / Excel ingestion. The
-# doc's MFC.xlsx / LRC.xlsx headers map onto the canonical names above.
-MFC_RAW_RENAME = {
-    "MFC_LOCATION": MFC_LOCATION,
-    "MFC_LOCATIONCODE": MFC_LOCATION_CODE,
-    "MFC_CODE": MFC_CODE,
-    "MFC_DESCRIPTION": MFC_DESCRIPTION,
-    "MFC_FACTORVALUE": MFC_FACTOR_VALUE,
-    "MFC_COSTUPDATEREPORTINGPERIOD_NAME": MFC_PERIOD,
-}
-LRC_RAW_RENAME = {
-    "LRC_LOCATION": LRC_LOCATION,
-    "LRC_LOCATIONCODE": LRC_LOCATION_CODE,
-    "LRC_FACTORMULTIPLIER": LRC_FACTOR_MULTIPLIER,
-    "LRC_COSTUPDATEREPORTINGPERIOD_NAME": LRC_PERIOD,
-    "LRC_TOTALUSDRATE": LRC_TOTAL_USD_RATE,
-}
+# Raw EMMA ingestion (Excel workbooks or the Unity Catalog tables loaded from
+# them) does NOT use a fixed rename map: headers vary between the doc's
+# ``MFC_*``/``LRC_*`` style and the exports' ``code``/``factorMultiplier``
+# style, and the material/labor contents can arrive under either name
+# (business Q8). ``src/emma_excel.py`` normalizes headers and classifies each
+# frame by its columns; both the Excel and Databricks paths route through it
+# onto the canonical names above.
 
 # =============================================================================
 # ADR raw -> canonical column maps (real ITPlus headers)

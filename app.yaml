@@ -20,10 +20,11 @@ env:
   - name: DATA_SOURCE
     value: "databricks"
   # EMMA (MFC/LRC) factors. "databricks" expects MFC / LRC tables in the same
-  # Unity Catalog namespace (see deploy/README.md for loading them from the
-  # Excel exports). Until those tables exist, switch to "excel" and ship the
-  # two workbooks in EMMA_DIR with the deployed source - note that data/*.xlsx
-  # is gitignored, so a plain repo deploy will NOT carry them.
+  # Unity Catalog namespace, uploaded as-is from the Excel exports - the
+  # loader normalizes headers and routes each table by content (see
+  # deploy/README.md). Alternative "excel" reads workbooks from EMMA_DIR in
+  # the deployed source - note that data/*.xlsx is gitignored, so a plain
+  # repo deploy will NOT carry them.
   - name: EMMA_SOURCE
     value: "databricks"
   # Unity Catalog namespace holding the migrated tables. These match the
